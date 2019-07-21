@@ -9,22 +9,29 @@ decode(El) -> decode(El, <<>>, []).
 
 decode(El, Opts) -> decode(El, <<>>, Opts).
 
-decode({xmlel, Name, Attrs, _} = El, TopXMLNS, Opts) ->
-    XMLNS = get_attr(<<"xmlns">>, Attrs, TopXMLNS),
-    case get_mod(Name, XMLNS) of
-      undefined when XMLNS == <<>> ->
-	  erlang:error({xmpp_codec, {missing_tag_xmlns, Name}});
-      undefined ->
-	  erlang:error({xmpp_codec, {unknown_tag, Name, XMLNS}});
-      Mod -> Mod:do_decode(Name, XMLNS, El, Opts)
-    end.
+decode(El1, TopXMLNS, Opts) ->
+
+  El = todus_codec:decode(El1),
+  {xmlel, Name, Attrs, _} = El,
+
+  XMLNS = get_attr(<<"xmlns">>, Attrs, TopXMLNS),
+  case get_mod(Name, XMLNS) of
+    undefined when XMLNS == <<>> ->
+      erlang:error({xmpp_codec, {missing_tag_xmlns, Name}});
+    undefined ->
+      erlang:error({xmpp_codec, {unknown_tag, Name, XMLNS}});
+    Mod -> Mod:do_decode(Name, XMLNS, El, Opts)
+  end.
 
 encode(El) -> encode(El, <<>>).
 
-encode({xmlel, _, _, _} = El, _) -> El;
+encode({xmlel, _, _, _} = El, _) ->
+  todus_codec:encode(El);
 encode({xmlcdata, _} = CData, _) -> CData;
 encode(El, TopXMLNS) ->
-    Mod = get_mod(El), Mod:do_encode(El, TopXMLNS).
+  Mod = get_mod(El),
+  Aux = Mod:do_encode(El, TopXMLNS),
+  todus_codec:encode(Aux).
 
 get_name(El) -> Mod = get_mod(El), Mod:do_get_name(El).
 
