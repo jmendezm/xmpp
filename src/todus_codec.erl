@@ -130,15 +130,15 @@ decode(#xmlel{name = Name, attrs = Attrs, children = Children}) ->
 decode({xmlcdata,_} = CD) ->
   CD.
 
-decode_attrs([]) ->
-  [];
 decode_attrs([ {A,V} | RA]) ->
-  [{mapa_decode(A),mapa_decode(V)} | decode_attrs(RA)].
+  [{mapa_decode(A),mapa_decode(V)} | decode_attrs(RA)];
+decode_attrs([]) ->
+  [].
 
-decode_children([]) ->
-  [];
 decode_children([ CH | RCH]) ->
-  [ decode(CH) | decode_children(RCH)].
+  [ decode(CH) | decode_children(RCH)];
+decode_children([]) ->
+  [].
 
 
 encode(#xmlel{name = Name, attrs = Attrs, children = Children}) ->
@@ -146,12 +146,12 @@ encode(#xmlel{name = Name, attrs = Attrs, children = Children}) ->
 encode({xmlcdata,_} = CD) ->
   CD.
 
-encode_attrs([]) ->
-  [];
 encode_attrs([ {A,V} | RA]) ->
-  [{mapa_encode(A),mapa_encode(V)} | encode_attrs(RA)].
+  [{mapa_encode(A),mapa_encode(V)} | encode_attrs(RA)];
+encode_attrs([]) ->
+  [].
 
-encode_children([]) ->
-  [];
 encode_children([ CH | RCH]) ->
-  [ encode(CH) | encode_children(RCH)].
+  [ encode(CH) | encode_children(RCH)];
+encode_children([]) ->
+  [].
