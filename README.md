@@ -47,6 +47,10 @@ The library is considered as production ready and has been used in
 However, the API is quite unstable so far and incompatibilities may be introduced
 from release to release. The stable API will be denoted by `2.x` tag in the future.
 
+# Dependency
+
+You need at least Erlang OTP 20.
+
 # Compiling
 
 As usual, the following commands are used to obtain and compile the library:
@@ -281,6 +285,7 @@ XMPP elements from the following documents are supported:
 - [XEP-0199](https://xmpp.org/extensions/xep-0199.html):  XMPP Ping
 - [XEP-0202](https://xmpp.org/extensions/xep-0202.html):  Entity Time
 - [XEP-0203](https://xmpp.org/extensions/xep-0203.html):  Delayed Delivery
+- [XEP-0215](https://xmpp.org/extensions/xep-0215.html):  External Service Discovery
 - [XEP-0220](https://xmpp.org/extensions/xep-0220.html):  Server Dialback
 - [XEP-0221](https://xmpp.org/extensions/xep-0221.html):  Data Forms Media Element
 - [XEP-0231](https://xmpp.org/extensions/xep-0231.html):  Bits of Binary
@@ -295,6 +300,7 @@ XMPP elements from the following documents are supported:
 - [XEP-0300](https://xmpp.org/extensions/xep-0300.html):  Use of Cryptographic Hash Functions in XMPP
 - [XEP-0313](https://xmpp.org/extensions/xep-0313.html):  Message Archive Management
 - [XEP-0319](https://xmpp.org/extensions/xep-0319.html):  Last User Interaction in Presence
+- [XEP-0328](https://xmpp.org/extensions/xep-0328.html):  JID Prep
 - [XEP-0334](https://xmpp.org/extensions/xep-0334.html):  Message Processing Hints
 - [XEP-0352](https://xmpp.org/extensions/xep-0352.html):  Client State Indication
 - [XEP-0355](https://xmpp.org/extensions/xep-0355.html):  Namespace Delegation

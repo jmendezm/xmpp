@@ -1,6 +1,6 @@
 %%%----------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2019 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -155,6 +155,7 @@
 -define(NS_PUSH_0, <<"urn:xmpp:push:0">>).
 -define(NS_CARBONS_2, <<"urn:xmpp:carbons:2">>).
 -define(NS_CARBONS_1, <<"urn:xmpp:carbons:1">>).
+-define(NS_CARBONS_RULES_0, <<"urn:xmpp:carbons:rules:0">>).
 -define(NS_FORWARD, <<"urn:xmpp:forward:0">>).
 -define(NS_CLIENT_STATE,  <<"urn:xmpp:csi:0">>).
 -define(NS_STREAM_MGMT_2,  <<"urn:xmpp:sm:2">>).
@@ -168,6 +169,7 @@
 -define(NS_REPORTING_0, <<"urn:xmpp:reporting:0">>).
 -define(NS_REPORTING_REASON_ABUSE_0, <<"urn:xmpp:reporting:reason:abuse:0">>).
 -define(NS_REPORTING_REASON_SPAM_0, <<"urn:xmpp:reporting:reason:spam:0">>).
+-define(NS_JIDPREP_0, <<"urn:xmpp:jidprep:0">>).
 -define(NS_SIC_0, <<"urn:xmpp:sic:0">>).
 -define(NS_SIC_1, <<"urn:xmpp:sic:1">>).
 -define(NS_MIX_CORE_0, <<"urn:xmpp:mix:core:0">>).
@@ -182,6 +184,7 @@
 -define(NS_MIX_NODES_INFO, <<"urn:xmpp:mix:nodes:info">>).
 -define(NS_PRIVILEGE, <<"urn:xmpp:privilege:1">>).
 -define(NS_DELEGATION, <<"urn:xmpp:delegation:1">>).
+-define(NS_EXTDISCO_2, <<"urn:xmpp:extdisco:2">>).
 -define(NS_MUCSUB, <<"urn:xmpp:mucsub:0">>).
 -define(NS_MUCSUB_NODES_PRESENCE, <<"urn:xmpp:mucsub:nodes:presence">>).
 -define(NS_MUCSUB_NODES_MESSAGES, <<"urn:xmpp:mucsub:nodes:messages">>).

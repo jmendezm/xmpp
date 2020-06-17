@@ -171,7 +171,9 @@ recompile_resolver(Mods, ResolverMod) ->
 							   M])
 				    end,
 				    Records)
-			    ++ ["lookup(_) -> erlang:error(badarg)."],
+			    ++
+			    ["lookup(Term) -> erlang:error(badarg, "
+			     "[Term])."],
 			  ";" ++ io_lib:nl()),
     Lookup2 = string:join(lists:map(fun ({Name, XMLNS,
 					  M}) ->
@@ -557,6 +559,8 @@ get_mod(<<"slot">>,
     xep0363;
 get_mod(<<"get">>, <<"urn:xmpp:http:upload:0">>) ->
     xep0363;
+get_mod(<<"service">>, <<"urn:xmpp:extdisco:2">>) ->
+    xep0215;
 get_mod(<<"pointer">>,
 	<<"urn:xmpp:avatar:metadata">>) ->
     xep0084;
@@ -771,9 +775,12 @@ get_mod(<<"metadata">>,
     xep0084;
 get_mod(<<"x509-cert">>, <<"urn:xmpp:x509:0">>) ->
     xep0417;
+get_mod(<<"jid">>, <<"urn:xmpp:jidprep:0">>) -> xep0328;
 get_mod(<<"password">>,
 	<<"http://jabber.org/protocol/muc#owner">>) ->
     xep0045;
+get_mod(<<"services">>, <<"urn:xmpp:extdisco:2">>) ->
+    xep0215;
 get_mod(<<"method">>,
 	<<"http://jabber.org/features/compress">>) ->
     xep0138;
@@ -818,6 +825,8 @@ get_mod(<<"PREFIX">>, <<"vcard-temp">>) -> xep0054;
 get_mod(<<"affiliations">>,
 	<<"http://jabber.org/protocol/pubsub">>) ->
     xep0060;
+get_mod(<<"credentials">>, <<"urn:xmpp:extdisco:2">>) ->
+    xep0215;
 get_mod(<<"desc">>,
 	<<"urn:xmpp:jingle:apps:file-transfer:5">>) ->
     xep0234;
@@ -899,15 +908,7 @@ get_mod(<<"error">>,
     xep0039;
 get_mod(<<"name">>, <<"jabber:iq:register">>) ->
     xep0077;
-get_mod(<<"not-authorized">>,
-	<<"urn:ietf:params:xml:ns:xmpp-streams">>) ->
-    rfc6120;
 get_mod(<<"PCS">>, <<"vcard-temp">>) -> xep0054;
-get_mod(<<"unsubscribe">>, <<"urn:xmpp:mucsub:0">>) ->
-    p1_mucsub;
-get_mod(<<"failed">>, <<"urn:xmpp:sm:2">>) -> xep0198;
-get_mod(<<"db:verify">>, <<"jabber:server">>) ->
-    xep0220;
 get_mod(<<"url">>, <<"jabber:x:oob">>) -> xep0066;
 get_mod(<<"disable">>, <<"urn:xmpp:push:0">>) ->
     xep0357;
@@ -915,9 +916,6 @@ get_mod(<<"delegated">>, <<"urn:xmpp:delegation:1">>) ->
     xep0355;
 get_mod(<<"hash-used">>, <<"urn:xmpp:hashes:2">>) ->
     xep0300;
-get_mod(<<"security-error">>,
-	<<"urn:xmpp:jingle:1">>) ->
-    xep0166;
 get_mod(<<"presence">>,
 	<<"jabber:component:accept">>) ->
     rfc6120;
@@ -1549,6 +1547,17 @@ get_mod(<<"max-file-size">>,
     xep0363;
 get_mod(<<"cancel">>, <<"urn:xmpp:jingle:1">>) ->
     xep0166;
+get_mod(<<"not-authorized">>,
+	<<"urn:ietf:params:xml:ns:xmpp-streams">>) ->
+    rfc6120;
+get_mod(<<"unsubscribe">>, <<"urn:xmpp:mucsub:0">>) ->
+    p1_mucsub;
+get_mod(<<"failed">>, <<"urn:xmpp:sm:2">>) -> xep0198;
+get_mod(<<"db:verify">>, <<"jabber:server">>) ->
+    xep0220;
+get_mod(<<"security-error">>,
+	<<"urn:xmpp:jingle:1">>) ->
+    xep0166;
 get_mod(Name, XMLNS) ->
     xmpp_codec_external:lookup(Name, XMLNS).
 
@@ -1562,6 +1571,7 @@ get_mod({upload_file_too_large, _, _}) -> xep0363;
 get_mod({jingle_ft_description, _}) -> xep0234;
 get_mod({x509_revoke, _, _}) -> xep0417;
 get_mod({muc_user, _, _, _, _, _, _}) -> xep0045;
+get_mod({jidprep, _}) -> xep0328;
 get_mod({bytestreams, _, _, _, _, _, _}) -> xep0065;
 get_mod({sasl_auth, _, _}) -> rfc6120;
 get_mod({vcard_logo, _, _, _}) -> xep0054;
@@ -1586,14 +1596,7 @@ get_mod({presence, _, _, _, _, _, _, _, _, _, _}) ->
     rfc6120;
 get_mod({streamhost, _, _, _}) -> xep0065;
 get_mod({iq, _, _, _, _, _, _, _}) -> rfc6120;
-get_mod({vcard_adr, _, _, _, _, _, _, _, _, _, _, _, _,
-	 _, _}) ->
-    xep0054;
 get_mod({xdata_option, _, _}) -> xep0004;
-get_mod({ps_unsubscribe, _, _, _}) -> xep0060;
-get_mod({sm_resume, _, _, _}) -> xep0198;
-get_mod({push_enable, _, _, _}) -> xep0357;
-get_mod({jingle_ft_range, _, _, _}) -> xep0234;
 get_mod({x509_cert_chain, _, _}) -> xep0417;
 get_mod({vcard_geo, _, _}) -> xep0054;
 get_mod({mam_query, _, _, _, _, _, _, _, _}) -> xep0313;
@@ -1638,6 +1641,7 @@ get_mod({muc, _, _}) -> xep0045;
 get_mod({carbons_enable}) -> xep0280;
 get_mod({carbons_private}) -> xep0280;
 get_mod({mix_leave}) -> xep0369;
+get_mod({services, _, _}) -> xep0215;
 get_mod({avatar_info, _, _, _, _, _, _}) -> xep0084;
 get_mod({privacy_list, _, _}) -> xep0016;
 get_mod({report, _, _}) -> xep0377;
@@ -1671,6 +1675,8 @@ get_mod({pubsub_owner, _, _, _, _, _, _}) -> xep0060;
 get_mod({mam_result, _, _, _, _}) -> xep0313;
 get_mod({sm_failed, _, _, _, _}) -> xep0198;
 get_mod({upload_request, _, _, _, _}) -> xep0363;
+get_mod({service, _, _, _, _, _, _, _, _, _, _, _}) ->
+    xep0215;
 get_mod({jingle_ft_checksum, _, _, _}) -> xep0234;
 get_mod({x509_request, _, _, _, _}) -> xep0417;
 get_mod({version, _, _, _}) -> xep0092;
@@ -1775,6 +1781,7 @@ get_mod({sasl_mechanisms, _}) -> rfc6120;
 get_mod({starttls, _}) -> rfc6120;
 get_mod({stream_start, _, _, _, _, _, _, _, _}) ->
     rfc6120;
+get_mod({credentials, _}) -> xep0215;
 get_mod({'see-other-host', _}) -> rfc6120;
 get_mod({muc_destroy, _, _, _, _}) -> xep0045;
 get_mod({hint, _}) -> xep0334;
@@ -1787,4 +1794,11 @@ get_mod({ibb_close, _}) -> xep0047;
 get_mod({vcard_sound, _, _, _}) -> xep0054;
 get_mod({ps_retract, _, _, _}) -> xep0060;
 get_mod({privilege_perm, _, _}) -> xep0356;
+get_mod({vcard_adr, _, _, _, _, _, _, _, _, _, _, _, _,
+	 _, _}) ->
+    xep0054;
+get_mod({ps_unsubscribe, _, _, _}) -> xep0060;
+get_mod({sm_resume, _, _, _}) -> xep0198;
+get_mod({push_enable, _, _, _}) -> xep0357;
+get_mod({jingle_ft_range, _, _, _}) -> xep0234;
 get_mod(Record) -> xmpp_codec_external:lookup(Record).

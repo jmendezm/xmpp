@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2019 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -25,11 +25,13 @@
 
 %% API
 -export([start/3, start_link/3, call/3, cast/2, reply/2, connect/1,
-	 stop/1, send/2, close/1, close/2, bind/2, establish/1, format_error/1,
+	 stop/1, stop_async/1, send/2, close/1, close/2, bind/2, establish/1, format_error/1,
 	 set_timeout/2, get_transport/1, change_shaper/2]).
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
+
+-deprecated([{stop, 1}]).
 
 %%-define(DBGFSM, true).
 -ifdef(DBGFSM).
@@ -196,13 +198,19 @@ connect(Ref) ->
 -spec stop(pid()) -> ok;
 	  (state()) -> no_return().
 stop(Pid) when is_pid(Pid) ->
-    cast(Pid, stop);
+    stop_async(Pid);
 stop(#{owner := Owner} = State) when Owner == self() ->
     terminate(normal, State),
     try erlang:nif_error(normal)
     catch _:_ -> exit(normal)
     end;
 stop(_) ->
+    erlang:error(badarg).
+
+-spec stop_async(pid()) -> ok.
+stop_async(Pid) when is_pid(Pid) ->
+    cast(Pid, stop);
+stop_async(_) ->
     erlang:error(badarg).
 
 -spec send(pid(), xmpp_element()) -> ok;
@@ -337,7 +345,7 @@ handle_cast(connect, #{remote_server := RemoteServer,
 	  false ->
 	      process_stream_end({idna, bad_string}, State);
 	  ASCIIName ->
-	      case resolve(binary_to_list(ASCIIName), State) of
+	      case resolve(ASCIIName, State) of
 		  {ok, AddrPorts} ->
 		      case connect(AddrPorts, State) of
 			  {ok, Socket, {Addr, Port, Encrypted}} ->
@@ -445,13 +453,14 @@ handle_info({'$gen_event', closed}, State) ->
     noreply(process_stream_end({socket, closed}, State));
 handle_info(timeout, #{lang := Lang} = State) ->
     Disconnected = is_disconnected(State),
-    noreply(try callback(handle_timeout, State)
-	    catch _:{?MODULE, undef} when not Disconnected ->
-		    Txt = <<"Idle connection">>,
-		    send_pkt(State, xmpp:serr_connection_timeout(Txt, Lang));
-		  _:{?MODULE, undef} ->
-		    stop(State)
-	    end);
+    try noreply(callback(handle_timeout, State))
+    catch
+	_:{?MODULE, undef} when not Disconnected ->
+	    Txt = <<"Idle connection">>,
+	    noreply(send_pkt(State, xmpp:serr_connection_timeout(Txt, Lang)));
+	_:{?MODULE, undef} ->
+	    {stop, normal, State}
+    end;
 handle_info({'DOWN', MRef, _Type, _Object, _Info},
 	    #{socket_monitor := MRef} = State) ->
     noreply(process_stream_end({socket, closed}, State));
@@ -522,7 +531,9 @@ process_stream_end(_, #{stream_state := disconnected} = State) ->
 process_stream_end(Reason, State) ->
     State1 = send_trailer(State),
     try callback(handle_stream_end, Reason, State1)
-    catch _:{?MODULE, undef} -> stop(State1)
+    catch _:{?MODULE, undef} ->
+	stop_async(self()),
+	State1
     end.
 
 -spec process_stream(stream_start(), state()) -> state().
@@ -627,7 +638,7 @@ process_stream_established(#{stream_state := StateName} = State)
   when StateName == disconnected; StateName == established ->
     State;
 process_stream_established(State) ->
-    State1 = State#{stream_authenticated := true,
+    State1 = State#{stream_authenticated => true,
 		    stream_state => established,
 		    stream_timeout => infinity},
     try callback(handle_stream_established, State1)
@@ -1111,14 +1122,14 @@ reset_state(State) ->
 %%%===================================================================
 %%% Connection stuff
 %%%===================================================================
--spec idna_to_ascii(binary()) -> binary() | false.
+-spec idna_to_ascii(binary()) -> string() | false.
 idna_to_ascii(<<$[, _/binary>> = Host) ->
     %% This is an IPv6 address in 'IP-literal' format (as per RFC7622)
     %% We remove brackets here
     case binary:last(Host) of
 	$] ->
-	    IPv6 = binary:part(Host, {1, size(Host)-2}),
-	    case inet:parse_ipv6strict_address(binary_to_list(IPv6)) of
+	    IPv6 = binary_to_list(binary:part(Host, {1, size(Host)-2})),
+	    case inet:parse_ipv6strict_address(IPv6) of
 		{ok, _} -> IPv6;
 		{error, _} -> false
 	    end;
@@ -1126,9 +1137,13 @@ idna_to_ascii(<<$[, _/binary>> = Host) ->
 	    false
     end;
 idna_to_ascii(Host) ->
-    case inet:parse_address(binary_to_list(Host)) of
-	{ok, _} -> Host;
-	{error, _} -> xmpp_idna:domain_utf8_to_ascii(Host)
+    SHost = binary_to_list(Host),
+    case inet:parse_address(SHost) of
+	{ok, _} -> SHost;
+	{error, _} ->
+	    try idna:utf8_to_ascii(Host)
+	    catch _:_ -> false
+	    end
     end.
 
 -spec resolve(string(), state()) -> {ok, [ip_port()]} | network_error().
