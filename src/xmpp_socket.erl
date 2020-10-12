@@ -1,22 +1,4 @@
-%%%-------------------------------------------------------------------
-%%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
-%%%
-%%% Licensed under the Apache License, Version 2.0 (the "License");
-%%% you may not use this file except in compliance with the License.
-%%% You may obtain a copy of the License at
-%%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
-%%%
-%%% Unless required by applicable law or agreed to in writing, software
-%%% distributed under the License is distributed on an "AS IS" BASIS,
-%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-%%% See the License for the specific language governing permissions and
-%%% limitations under the License.
-%%%
-%%%-------------------------------------------------------------------
 -module(xmpp_socket).
--author('alexey@process-one.net').
 -dialyzer({no_match, [send/2, parse/2]}).
 
 %% API
@@ -24,9 +6,6 @@
 	 connect/3,
 	 connect/4,
 	 connect/5,
-	 starttls/2,
-	 compress/1,
-	 compress/2,
 	 reset_stream/1,
 	 send_element/2,
 	 send_header/2,
@@ -40,7 +19,6 @@
 	 get_sockmod/1,
 	 get_transport/1,
 	 get_peer_certificate/2,
-	 get_verify_result/1,
 	 close/1,
 	 pp/1,
 	 sockname/1,
@@ -50,9 +28,8 @@
 -include("xmpp.hrl").
 -include_lib("public_key/include/public_key.hrl").
 
--type sockmod() :: gen_tcp | fast_tls | ezlib | ext_mod().
--type socket() :: inet:socket() | fast_tls:tls_socket() |
-		  ezlib:zlib_socket() | ext_socket().
+-type sockmod() :: gen_tcp | ext_mod().
+-type socket() :: inet:socket() | ext_socket().
 -type ext_mod() :: module().
 -type ext_socket() :: any().
 -type endpoint() :: {inet:ip_address(), inet:port_number()}.
@@ -133,50 +110,6 @@ connect(Addr, Port, Opts, Timeout, Owner) ->
 	    Error
     end.
 
--spec starttls(socket_state(), [proplists:property()]) ->
-		      {ok, socket_state()} |
-		      {error, inet:posix() | atom() | binary()}.
-starttls(#socket_state{sockmod = gen_tcp,
-		       socket = Socket} = SocketData, TLSOpts) ->
-    case fast_tls:tcp_to_tls(Socket, TLSOpts) of
-	{ok, TLSSocket} ->
-	    SocketData1 = SocketData#socket_state{socket = TLSSocket,
-						  sockmod = fast_tls},
-	    SocketData2 = reset_stream(SocketData1),
-	    case fast_tls:recv_data(TLSSocket, <<>>) of
-		{ok, TLSData} ->
-		    parse(SocketData2, TLSData);
-		{error, _} = Err ->
-		    Err
-	    end;
-	{error, _} = Err ->
-	    Err
-    end;
-starttls(_, _) ->
-    erlang:error(badarg).
-
-compress(SocketData) -> compress(SocketData, undefined).
-
-compress(#socket_state{sockmod = SockMod,
-		       socket = Socket} = SocketData, Data)
-  when SockMod == gen_tcp orelse SockMod == fast_tls ->
-    {ok, ZlibSocket} = ezlib:enable_zlib(SockMod, Socket),
-    case Data of
-	undefined -> ok;
-	_ -> send(SocketData, Data)
-    end,
-    SocketData1 = SocketData#socket_state{socket = ZlibSocket,
-					  sockmod = ezlib},
-    SocketData2 = reset_stream(SocketData1),
-    case ezlib:recv_data(ZlibSocket, <<"">>) of
-	{ok, ZlibData} ->
-	    parse(SocketData2, ZlibData);
-	{error, _} = Err ->
-	    Err
-    end;
-compress(_, _) ->
-    erlang:error(badarg).
-
 reset_stream(#socket_state{xml_stream = XMLStream,
 			   sockmod = SockMod, socket = Socket,
 			   max_stanza_size = MaxStanzaSize} = SocketData) ->
@@ -247,25 +180,8 @@ stringify_stream_element({xmlstreamerror, Data}) ->
 stringify_stream_element({xmlstreamraw, Data}) ->
     Data.
 
-recv(#socket_state{sockmod = SockMod, socket = Socket} = SocketData, Data) ->
-    case SockMod of
-	fast_tls ->
-	    case fast_tls:recv_data(Socket, Data) of
-		{ok, TLSData} ->
-		    parse(SocketData, TLSData);
-		{error, _} = Err ->
-		    Err
-	    end;
-	ezlib ->
-	    case ezlib:recv_data(Socket, Data) of
-		{ok, ZlibData} ->
-		    parse(SocketData, ZlibData);
-		{error, _} = Err ->
-		    Err
-	    end;
-	_ ->
-	    parse(SocketData, Data)
-    end.
+recv(#socket_state{sockmod = _SockMod, socket = _Socket} = SocketData, Data) ->
+	parse(SocketData, Data).
 
 -spec change_shaper(socket_state(), none | p1_shaper:state()) -> socket_state().
 change_shaper(#socket_state{xml_stream = XMLStream,
@@ -295,18 +211,10 @@ get_transport(#socket_state{sockmod = SockMod,
 			    socket = Socket}) ->
     case SockMod of
 	gen_tcp -> tcp;
-	fast_tls -> tls;
-	ezlib ->
-	    case ezlib:get_sockmod(Socket) of
-		gen_tcp -> tcp_zlib;
-		fast_tls -> tls_zlib
-	    end;
 	_ -> SockMod:get_transport(Socket)
     end.
 
-get_owner(SockMod, _) when SockMod == gen_tcp orelse
-			   SockMod == fast_tls orelse
-			   SockMod == ezlib ->
+get_owner(SockMod, _) when SockMod == gen_tcp ->
     self();
 get_owner(SockMod, Socket) ->
     SockMod:get_owner(Socket).
@@ -319,9 +227,6 @@ get_peer_certificate(#socket_state{sockmod = SockMod,
 	true -> SockMod:get_peer_certificate(Socket, Type);
 	false -> error
     end.
-
-get_verify_result(SocketData) ->
-    fast_tls:get_verify_result(SocketData#socket_state.socket).
 
 close(#socket_state{sockmod = SockMod, socket = Socket}) ->
     SockMod:close(Socket).

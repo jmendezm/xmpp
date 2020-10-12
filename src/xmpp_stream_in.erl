@@ -50,32 +50,21 @@
 		   socket_monitor => reference(),
 		   stream_timeout := {integer(), integer()} | infinity,
 		   stream_state := stream_state(),
-		   stream_direction => in | out,
 		   stream_id => binary(),
-		   stream_header_sent => boolean(),
 		   stream_restarted => boolean(),
-		   stream_compressed => boolean(),
-		   stream_encrypted => boolean(),
-		   stream_version => {non_neg_integer(), non_neg_integer()},
 		   stream_authenticated => boolean(),
 		   ip => {inet:ip_address(), inet:port_number()},
 		   codec_options => [xmpp:decode_option()],
-		   xmlns => binary(),
-		   lang => binary(),
 		   user => binary(),
 		   server => binary(),
 		   resource => binary(),
 		   lserver => binary(),
 		   remote_server => binary(),
-		   sasl_mech => binary(),
-		   sasl_state => xmpp_sasl:sasl_state(),
 		   _ => _}.
--type stream_state() :: accepting | wait_for_stream | wait_for_handshake |
-			wait_for_starttls | wait_for_sasl_request |
+-type stream_state() :: accepting | wait_for_stream | wait_for_handshake | wait_for_sasl_request |
 			wait_for_sasl_response | wait_for_bind |
 			established | disconnected.
 -type stop_reason() :: {stream, reset | {in | out, stream_error()}} |
-		       {tls, inet:posix() | atom() | binary()} |
 		       {socket, inet:posix() | atom()} |
 		       internal_failure.
 -type noreply() :: {noreply, state(), timeout()}.
@@ -104,10 +93,7 @@
 -callback check_password_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback check_password_digest_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback bind(binary(), state()) -> {ok, state()} | {error, stanza_error(), state()}.
--callback compress_methods(state()) -> [binary()].
--callback tls_options(state()) -> [proplists:property()].
--callback tls_required(state()) -> boolean().
--callback tls_enabled(state()) -> boolean().
+
 -callback sasl_mechanisms([xmpp_sasl:mechanism()], state()) -> [xmpp_sasl:mechanism()].
 -callback unauthenticated_stream_features(state()) -> [xmpp_element()].
 -callback authenticated_stream_features(state()) -> [xmpp_element()].
@@ -136,10 +122,6 @@
 		     check_password_fun/2,
 		     check_password_digest_fun/2,
 		     bind/2,
-		     compress_methods/1,
-		     tls_options/1,
-		     tls_required/1,
-		     tls_enabled/1,
 		     sasl_mechanisms/2,
 		     unauthenticated_stream_features/1,
 		     authenticated_stream_features/1]).
@@ -261,8 +243,6 @@ format_error({stream, {in, #stream_error{} = Err}}) ->
     format("Stream closed by peer: ~s", [xmpp:format_stream_error(Err)]);
 format_error({stream, {out, #stream_error{} = Err}}) ->
     format("Stream closed by local host: ~s", [xmpp:format_stream_error(Err)]);
-format_error({tls, Reason}) ->
-    format("TLS failed: ~s", [format_tls_error(Reason)]);
 format_error(internal_failure) ->
     <<"Internal server error">>;
 format_error(Err) ->
@@ -335,94 +315,83 @@ handle_call(Call, From, State) ->
 -spec handle_info(term(), state()) -> next_state().
 handle_info(_, #{stream_state := accepting} = State) ->
     {stop, normal, State};
-handle_info({'$gen_event', {xmlstreamstart, Name, Attrs}},
-	    #{stream_state := wait_for_stream,
-	      xmlns := XMLNS, lang := MyLang} = State) ->
-    El = #xmlel{name = Name, attrs = Attrs},
-    noreply(
-      try xmpp:decode(El, XMLNS, []) of
-	  #stream_start{} = Pkt ->
-	      State1 = send_header(State, Pkt),
-	      case is_disconnected(State1) of
-		  true -> State1;
-		  false -> process_stream(Pkt, State1)
-	      end;
-	  _ ->
-	      State1 = send_header(State),
-	      case is_disconnected(State1) of
-		  true -> State1;
-		  false -> send_pkt(State1, xmpp:serr_invalid_xml())
-	      end
-      catch _:{xmpp_codec, Why} ->
-	      State1 = send_header(State),
-	      case is_disconnected(State1) of
-		  true -> State1;
-		  false ->
-		      Txt = xmpp:io_format_error(Why),
-		      Lang = select_lang(MyLang, xmpp:get_lang(El)),
-		      Err = xmpp:serr_invalid_xml(Txt, Lang),
-		      send_pkt(State1, Err)
-	      end
-      end);
+handle_info({'$gen_event', {xmlstreamstart, Name, Attrs}}, #{stream_state := wait_for_stream} = State) ->
+	El = #xmlel{name = Name, attrs = Attrs},
+	noreply(
+		try xmpp:decode(El, []) of
+			#stream_start{} = Pkt ->
+				State1 = send_header(State, Pkt),
+				case is_disconnected(State1) of
+					true -> State1;
+					false -> process_stream(Pkt, State1)
+				end;
+			_ ->
+				send_pkt(State, xmpp:serr_invalid_xml())
+		catch _:{xmpp_codec, Why} ->
+			case is_disconnected(State) of
+				true -> State;
+				false ->
+					Txt = xmpp:io_format_error(Why),
+					Err = xmpp:serr_invalid_xml(Txt),
+					send_pkt(State, Err)
+			end
+		end);
 handle_info({'$gen_event', {xmlstreamend, _}}, State) ->
     noreply(process_stream_end({stream, reset}, State));
 handle_info({'$gen_event', closed}, State) ->
     noreply(process_stream_end({socket, closed}, State));
-handle_info({'$gen_event', {xmlstreamerror, Reason}}, #{lang := Lang}= State) ->
-    State1 = send_header(State),
-    noreply(
-      case is_disconnected(State1) of
-	  true -> State1;
-	  false ->
-	      Err = case Reason of
-			<<"XML stanza is too big">> ->
-			    xmpp:serr_policy_violation(Reason, Lang);
-			{_, Txt} ->
-			    xmpp:serr_not_well_formed(Txt, Lang)
-		    end,
-	      send_pkt(State1, Err)
-      end);
+handle_info({'$gen_event', {xmlstreamerror, Reason}}, State) ->
+	State1 = send_header(State),
+	noreply(
+		case is_disconnected(State1) of
+			true -> State1;
+			false ->
+				Err = case Reason of
+								<<"XML stanza is too big">> ->
+									xmpp:serr_policy_violation(Reason);
+								{_, Txt} ->
+									xmpp:serr_not_well_formed(Txt)
+							end,
+				send_pkt(State1, Err)
+		end);
 handle_info({'$gen_event', El}, #{stream_state := wait_for_stream} = State) ->
-    error_logger:warning_msg("unexpected event from XML driver: ~p; "
-			     "xmlstreamstart was expected", [El]),
-    State1 = send_header(State),
-    noreply(
-      case is_disconnected(State1) of
-	  true -> State1;
-	  false -> send_pkt(State1, xmpp:serr_invalid_xml())
-      end);
-handle_info({'$gen_event', {xmlstreamelement, El}},
-	    #{xmlns := NS, codec_options := Opts} = State) ->
-    noreply(
-      try xmpp:decode(El, NS, Opts) of
-	  Pkt ->
-	      State1 = try callback(handle_recv, El, Pkt, State)
-		       catch _:{?MODULE, undef} -> State
-		       end,
-	      case is_disconnected(State1) of
-		  true -> State1;
-		  false -> process_element(Pkt, State1)
-	      end
-      catch _:{xmpp_codec, Why} ->
-	      State1 = try callback(handle_recv, El, {error, Why}, State)
-		       catch _:{?MODULE, undef} -> State
-		       end,
-	      case is_disconnected(State1) of
-		  true -> State1;
-		  false -> process_invalid_xml(State1, El, Why)
-	      end
-      end);
+	error_logger:warning_msg("unexpected event from XML driver: ~p; xmlstreamstart was expected", [El]),
+	noreply(
+		case is_disconnected(State) of
+			true -> State;
+			false -> send_pkt(State, xmpp:serr_invalid_xml())
+		end);
+handle_info({'$gen_event', {xmlstreamelement, El}}, #{codec_options := Opts} = State) ->
+	noreply(
+		try xmpp:decode(El, Opts) of
+			Pkt ->
+				State1 = try callback(handle_recv, El, Pkt, State)
+								 catch _:{?MODULE, undef} -> State
+								 end,
+				case is_disconnected(State1) of
+					true -> State1;
+					false -> process_element(Pkt, State1)
+				end
+		catch _:{xmpp_codec, Why} ->
+			State1 = try callback(handle_recv, El, {error, Why}, State)
+							 catch _:{?MODULE, undef} -> State
+							 end,
+			case is_disconnected(State1) of
+				true -> State1;
+				false -> process_invalid_xml(State1, El, Why)
+			end
+		end);
 handle_info({'$gen_all_state_event', {xmlstreamcdata, Data}},
 	    State) ->
     noreply(try callback(handle_cdata, Data, State)
 	    catch _:{?MODULE, undef} -> State
 	    end);
-handle_info(timeout, #{lang := Lang} = State) ->
+handle_info(timeout, State) ->
     Disconnected = is_disconnected(State),
     noreply(try callback(handle_timeout, State)
 	    catch _:{?MODULE, undef} when not Disconnected ->
 		    Txt = <<"Idle connection">>,
-		    send_pkt(State, xmpp:serr_connection_timeout(Txt, Lang));
+		    send_pkt(State, xmpp:serr_connection_timeout(Txt));
 		  _:{?MODULE, undef} ->
 		      {stop, normal, State}
 	    end);
@@ -473,19 +442,11 @@ code_change(OldVsn, State, Extra) ->
 %%%===================================================================
 -spec init_state(state(), [proplists:property()]) -> state().
 init_state(#{socket := Socket, mod := Mod} = State, Opts) ->
-    Encrypted = proplists:get_bool(tls, Opts),
-    State1 = State#{stream_direction => in,
-		    stream_id => xmpp_stream:new_id(),
+    State1 = State#{stream_id => xmpp_stream:new_id(),
 		    stream_state => wait_for_stream,
-		    stream_header_sent => false,
 		    stream_restarted => false,
-		    stream_compressed => false,
-		    stream_encrypted => Encrypted,
-		    stream_version => {1,0},
 		    stream_authenticated => false,
 		    codec_options => [ignore_els],
-		    xmlns => ?NS_CLIENT,
-		    lang => <<"">>,
 		    user => <<"">>,
 		    server => <<"">>,
 		    resource => <<"">>,
@@ -493,18 +454,8 @@ init_state(#{socket := Socket, mod := Mod} = State, Opts) ->
     case try Mod:init([State1, Opts])
 	 catch _:undef -> {ok, State1}
 	 end of
-	{ok, State2} when not Encrypted ->
+	{ok, State2} ->
 	    State2;
-	{ok, State2} when Encrypted ->
-	    TLSOpts = try callback(tls_options, State2)
-		      catch _:{?MODULE, undef} -> []
-		      end,
-	    case xmpp_socket:starttls(Socket, TLSOpts) of
-		{ok, TLSSocket} ->
-		    State2#{socket => TLSSocket};
-		{error, Reason} ->
-		    process_stream_end({tls, Reason}, State2)
-	    end;
 	{error, Reason} ->
 	    process_stream_end(Reason, State1);
 	ignore ->
@@ -527,25 +478,18 @@ is_disconnected(#{stream_state := StreamState}) ->
     StreamState == disconnected.
 
 -spec process_invalid_xml(state(), fxml:xmlel(), term()) -> state().
-process_invalid_xml(#{lang := MyLang} = State, El, Reason) ->
+process_invalid_xml(State, El, Reason) ->
     case xmpp:is_stanza(El) of
 	true ->
 	    Txt = xmpp:io_format_error(Reason),
-	    Lang = select_lang(MyLang, xmpp:get_lang(El)),
-	    send_error(State, El, xmpp:err_bad_request(Txt, Lang));
+	    send_error(State, El, xmpp:err_bad_request(Txt, <<"en">>));
 	false ->
 	    case {xmpp:get_name(El), xmpp:get_ns(El)} of
 		{Tag, ?NS_SASL} when Tag == <<"auth">>;
 				     Tag == <<"response">>;
 				     Tag == <<"abort">> ->
 		    Txt = xmpp:io_format_error(Reason),
-		    Err = #sasl_failure{reason = 'malformed-request',
-					text = xmpp:mk_text(Txt, MyLang)},
-		    send_pkt(State, Err);
-		{<<"starttls">>, ?NS_TLS} ->
-		    send_pkt(State, #starttls_failure{});
-		{<<"compress">>, ?NS_COMPRESS} ->
-		    Err = #compress_failure{reason = 'setup-failed'},
+		    Err = #sasl_failure{reason = 'malformed-request', text = xmpp:mk_text(Txt, <<"en">>)},
 		    send_pkt(State, Err);
 		_ ->
 		    %% Maybe add something more?
@@ -573,29 +517,20 @@ process_stream(#stream_start{xmlns = XML_NS,
     send_pkt(State, xmpp:serr_invalid_namespace());
 process_stream(#stream_start{version = {N, _}}, State) when N > 1 ->
     send_pkt(State, xmpp:serr_unsupported_version());
-process_stream(#stream_start{lang = Lang},
-	       #{xmlns := ?NS_CLIENT, lang := DefaultLang} = State)
-  when size(Lang) > 35 ->
-    %% As stated in BCP47, 4.4.1:
-    %% Protocols or specifications that specify limited buffer sizes for
-    %% language tags MUST allow for language tags of at least 35 characters.
-    %% Do not store long language tag to avoid possible DoS/flood attacks
-    Txt = <<"Too long value of 'xml:lang' attribute">>,
-    send_pkt(State, xmpp:serr_policy_violation(Txt, DefaultLang));
 process_stream(#stream_start{to = undefined, version = Version} = StreamStart,
-	       #{lang := Lang, server := Server, xmlns := NS} = State) ->
+	       #{server := Server, xmlns := NS} = State) ->
     if Version < {1,0} andalso NS /= ?NS_COMPONENT ->
 	    %% Work-around for gmail servers
 	    To = jid:make(Server),
 	    process_stream(StreamStart#stream_start{to = To}, State);
        true ->
 	    Txt = <<"Missing 'to' attribute">>,
-	    send_pkt(State, xmpp:serr_improper_addressing(Txt, Lang))
+	    send_pkt(State, xmpp:serr_improper_addressing(Txt, <<"en">>))
     end;
 process_stream(#stream_start{to = #jid{luser = U, lresource = R}},
-	       #{lang := Lang} = State) when U /= <<"">>; R /= <<"">> ->
+	       State) when U /= <<"">>; R /= <<"">> ->
     Txt = <<"Improper 'to' attribute">>,
-    send_pkt(State, xmpp:serr_improper_addressing(Txt, Lang));
+    send_pkt(State, xmpp:serr_improper_addressing(Txt, <<"en">>));
 process_stream(#stream_start{to = #jid{lserver = RemoteServer}} = StreamStart,
 	       #{xmlns := ?NS_COMPONENT} = State) ->
     State1 = State#{remote_server => RemoteServer,
@@ -607,8 +542,7 @@ process_stream(#stream_start{to = #jid{server = Server, lserver = LServer},
 			     from = From} = StreamStart,
 	       #{stream_authenticated := Authenticated,
 		 stream_restarted := StreamWasRestarted,
-		 xmlns := NS, resource := Resource,
-		 stream_encrypted := Encrypted} = State) ->
+		 xmlns := NS, resource := Resource} = State) ->
     State1 = if not StreamWasRestarted ->
 		     State#{server => Server, lserver => LServer};
 		true ->
@@ -630,10 +564,7 @@ process_stream(#stream_start{to = #jid{server = Server, lserver = LServer},
 	    case is_disconnected(State4) of
 		true -> State4;
 		false ->
-		    TLSRequired = is_starttls_required(State4),
-		    if not Authenticated and (TLSRequired and not Encrypted) ->
-			    State4#{stream_state => wait_for_starttls};
-		       not Authenticated ->
+		    if not Authenticated ->
 			    State4#{stream_state => wait_for_sasl_request};
 		       (NS == ?NS_CLIENT) and (Resource == <<"">>) ->
 			    State4#{stream_state => wait_for_bind};
@@ -644,13 +575,9 @@ process_stream(#stream_start{to = #jid{server = Server, lserver = LServer},
     end.
 
 -spec process_element(xmpp_element(), state()) -> state().
-process_element(Pkt, #{stream_state := StateName, lang := Lang} = State) ->
+process_element(Pkt, #{stream_state := StateName} = State) ->
+	Lang = <<"en">>,
     case Pkt of
-	#starttls{} when StateName == wait_for_starttls;
-			 StateName == wait_for_sasl_request ->
-	    process_starttls(State);
-	#starttls{} ->
-	    process_starttls_failure(unexpected_starttls_request, State);
 	#sasl_auth{} when StateName == wait_for_starttls ->
 	    send_pkt(State, #sasl_failure{reason = 'encryption-required'});
 	#sasl_auth{} when StateName == wait_for_sasl_request ->
@@ -675,8 +602,6 @@ process_element(Pkt, #{stream_state := StateName, lang := Lang} = State) ->
 	    send_pkt(State, #sasl_failure{reason = 'aborted'});
 	#sasl_success{} ->
 	    State;
-	#compress{} ->
-	    process_compress(Pkt, State);
 	#handshake{} when StateName == wait_for_handshake ->
 	    process_handshake(Pkt, State);
 	#handshake{} ->
@@ -687,10 +612,6 @@ process_element(Pkt, #{stream_state := StateName, lang := Lang} = State) ->
 	       StateName == wait_for_handshake;
 	       StateName == wait_for_sasl_response ->
 	    process_unauthenticated_packet(Pkt, State);
-	_ when StateName == wait_for_starttls ->
-	    Txt = <<"Use of STARTTLS required">>,
-	    Err = xmpp:serr_policy_violation(Txt, Lang),
-	    send_pkt(State, Err);
 	_ when StateName == wait_for_bind ->
 	    process_bind(Pkt, State);
 	_ when StateName == established ->
@@ -722,7 +643,7 @@ process_authenticated_packet(Pkt, State) ->
 
 -spec process_bind(xmpp_element(), state()) -> state().
 process_bind(#iq{type = set, sub_els = [_]} = Pkt,
-	     #{xmlns := ?NS_CLIENT, lang := MyLang} = State) ->
+	     #{xmlns := ?NS_CLIENT} = State) ->
     try xmpp:try_subtag(Pkt, #bind{}) of
 	#bind{resource = R} ->
 	    case callback(bind, R, State) of
@@ -742,8 +663,7 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
 	    end
     catch _:{xmpp_codec, Why} ->
 	    Txt = xmpp:io_format_error(Why),
-	    Lang = select_lang(MyLang, xmpp:get_lang(Pkt)),
-	    Err = xmpp:err_bad_request(Txt, Lang),
+	    Err = xmpp:err_bad_request(Txt, <<"en">>),
 	    send_error(State, Pkt, Err)
     end;
 process_bind(Pkt, State) ->
@@ -797,78 +717,6 @@ process_stream_established(State) ->
 		    stream_timeout => infinity},
     try callback(handle_stream_established, State1)
     catch _:{?MODULE, undef} -> State1
-    end.
-
--spec process_compress(compress(), state()) -> state().
-process_compress(#compress{},
-		 #{stream_compressed := Compressed,
-		   stream_authenticated := Authenticated} = State)
-  when Compressed or not Authenticated ->
-    send_pkt(State, #compress_failure{reason = 'setup-failed'});
-process_compress(#compress{methods = HisMethods},
-		 #{socket := Socket} = State) ->
-    MyMethods = try callback(compress_methods, State)
-		catch _:{?MODULE, undef} -> []
-		end,
-    CommonMethods = lists_intersection(MyMethods, HisMethods),
-    case lists:member(<<"zlib">>, CommonMethods) of
-	true ->
-	    case xmpp_socket:compress(Socket) of
-		{ok, ZlibSocket} ->
-		    State1 = send_pkt(State, #compressed{}),
-		    case is_disconnected(State1) of
-			true -> State1;
-			false ->
-			    State1#{socket => ZlibSocket,
-				    stream_id => xmpp_stream:new_id(),
-				    stream_header_sent => false,
-				    stream_restarted => true,
-				    stream_state => wait_for_stream,
-				    stream_compressed => true}
-		    end;
-		{error, _} ->
-		    Err = #compress_failure{reason = 'setup-failed'},
-		    send_pkt(State, Err)
-	    end;
-	false ->
-	    send_pkt(State, #compress_failure{reason = 'unsupported-method'})
-    end.
-
--spec process_starttls(state()) -> state().
-process_starttls(#{stream_encrypted := true} = State) ->
-    process_starttls_failure(already_encrypted, State);
-process_starttls(#{socket := Socket} = State) ->
-    case is_starttls_available(State) of
-	true ->
-	    TLSOpts = try callback(tls_options, State)
-		      catch _:{?MODULE, undef} -> []
-		      end,
-	    case xmpp_socket:starttls(Socket, TLSOpts) of
-		{ok, TLSSocket} ->
-		    State1 = send_pkt(State, #starttls_proceed{}),
-		    case is_disconnected(State1) of
-			true -> State1;
-			false ->
-			    State1#{socket => TLSSocket,
-				    stream_id => xmpp_stream:new_id(),
-				    stream_header_sent => false,
-				    stream_restarted => true,
-				    stream_state => wait_for_stream,
-				    stream_encrypted => true}
-		    end;
-		{error, Reason} ->
-		    process_starttls_failure(Reason, State)
-	    end;
-	false ->
-	    process_starttls_failure(starttls_unsupported, State)
-    end.
-
--spec process_starttls_failure(term(), state()) -> state().
-process_starttls_failure(Why, State) ->
-    State1 = send_pkt(State, #starttls_failure{}),
-    case is_disconnected(State1) of
-	true -> State1;
-	false -> process_stream_end({tls, Why}, State1)
     end.
 
 -spec process_sasl_request(sasl_auth(), state()) -> state().
@@ -934,7 +782,6 @@ process_sasl_success(Props, ServerOut,
 					 maps:remove(sasl_mech, State2)),
 		    State3#{stream_id => xmpp_stream:new_id(),
 			    stream_authenticated => true,
-			    stream_header_sent => false,
 			    stream_restarted => true,
 			    stream_state => wait_for_stream,
 			    user => User}
@@ -949,7 +796,7 @@ process_sasl_continue(ServerOut, NewSASLState, State) ->
 
 -spec process_sasl_failure(atom(), binary(), state()) -> state().
 process_sasl_failure(Err, User,
-		     #{sasl_mech := Mech, lang := Lang} = State) ->
+		     #{sasl_mech := Mech} = State) ->
     {Reason, Text} = format_sasl_error(Mech, Err),
     State1 = try callback(handle_auth_failure, User, Mech, Text, State)
 	     catch _:{?MODULE, undef} -> State
@@ -959,7 +806,7 @@ process_sasl_failure(Err, User,
 	false ->
 	    State2 = send_pkt(State1,
 			      #sasl_failure{reason = Reason,
-					    text = xmpp:mk_text(Text, Lang)}),
+					    text = xmpp:mk_text(Text, <<"en">>)}),
 	    case is_disconnected(State2) of
 		true -> State2;
 		false ->
@@ -974,16 +821,10 @@ process_sasl_abort(State) ->
     process_sasl_failure(aborted, <<"">>, State).
 
 -spec send_features(state()) -> state().
-send_features(#{stream_version := {1,0},
-		stream_encrypted := Encrypted} = State) ->
-    TLSRequired = is_starttls_required(State),
-    Features = if TLSRequired and not Encrypted ->
-		       get_tls_feature(State);
-		  true ->
-		       get_sasl_feature(State) ++ get_compress_feature(State)
-			   ++ get_tls_feature(State) ++ get_bind_feature(State)
-			   ++ get_session_feature(State) ++ get_other_features(State)
-	       end,
+send_features(#{stream_version := {1,0}} = State) ->
+    Features =
+			get_sasl_feature(State) ++ get_bind_feature(State)
+			   ++ get_session_feature(State) ++ get_other_features(State),
     send_pkt(State, #stream_features{sub_els = Features});
 send_features(State) ->
     %% clients and servers from stone age
@@ -1027,41 +868,10 @@ get_sasl_mechanisms(#{stream_encrypted := Encrypted,
     end.
 
 -spec get_sasl_feature(state()) -> [sasl_mechanisms()].
-get_sasl_feature(#{stream_authenticated := false,
-		   stream_encrypted := Encrypted} = State) ->
-    TLSRequired = is_starttls_required(State),
-    if Encrypted or not TLSRequired ->
-	    Mechs = get_sasl_mechanisms(State),
-	    [#sasl_mechanisms{list = Mechs}];
-       true ->
-	    []
-    end;
+get_sasl_feature(#{stream_authenticated := false} = State) ->
+	Mechs = get_sasl_mechanisms(State),
+	[#sasl_mechanisms{list = Mechs}];
 get_sasl_feature(_) ->
-    [].
-
--spec get_compress_feature(state()) -> [compression()].
-get_compress_feature(#{stream_compressed := false,
-		       stream_authenticated := true} = State) ->
-    try callback(compress_methods, State) of
-	[] -> [];
-	Ms -> [#compression{methods = Ms}]
-    catch _:{?MODULE, undef} ->
-	    []
-    end;
-get_compress_feature(_) ->
-    [].
-
--spec get_tls_feature(state()) -> [starttls()].
-get_tls_feature(#{stream_authenticated := false,
-		  stream_encrypted := false} = State) ->
-    case is_starttls_available(State) of
-	true ->
-	    TLSRequired = is_starttls_required(State),
-	    [#starttls{required = TLSRequired}];
-	false ->
-	    []
-    end;
-get_tls_feature(_) ->
     [].
 
 -spec get_bind_feature(state()) -> [bind()].
@@ -1090,24 +900,11 @@ get_other_features(#{stream_authenticated := Auth} = State) ->
 	    []
     end.
 
--spec is_starttls_available(state()) -> boolean().
-is_starttls_available(State) ->
-    try callback(tls_enabled, State)
-    catch _:{?MODULE, undef} -> true
-    end.
-
--spec is_starttls_required(state()) -> boolean().
-is_starttls_required(State) ->
-    try callback(tls_required, State)
-    catch _:{?MODULE, undef} -> false
-    end.
-
 -spec set_from_to(xmpp_element(), state()) -> {ok, xmpp_element()} |
 					      {error, stream_error()}.
 set_from_to(Pkt, _State) when not ?is_stanza(Pkt) ->
     {ok, Pkt};
-set_from_to(Pkt, #{user := U, server := S, resource := R,
-		   lang := Lang, xmlns := ?NS_CLIENT}) ->
+set_from_to(Pkt, #{user := U, server := S, resource := R, xmlns := ?NS_CLIENT}) ->
     JID = jid:make(U, S, R),
     From = case xmpp:get_from(Pkt) of
 	       undefined -> JID;
@@ -1124,7 +921,7 @@ set_from_to(Pkt, #{user := U, server := S, resource := R,
 	    {ok, xmpp:set_from_to(Pkt, JID, To)};
        true ->
 	    Txt = <<"Improper 'from' attribute">>,
-	    {error, xmpp:serr_invalid_from(Txt, Lang)}
+	    {error, xmpp:serr_invalid_from(Txt, <<"en">>)}
     end;
 set_from_to(Pkt, #{lang := Lang}) ->
     From = xmpp:get_from(Pkt),
@@ -1144,36 +941,11 @@ send_header(#{stream_version := Version} = State) ->
     send_header(State, #stream_start{version = Version}).
 
 -spec send_header(state(), stream_start()) -> state().
-send_header(#{stream_id := StreamID,
-	      stream_version := MyVersion,
-	      stream_header_sent := false,
-	      lang := MyLang,
-	      xmlns := NS} = State,
-	    #stream_start{to = HisTo, from = HisFrom,
-			  lang = HisLang, version = HisVersion}) ->
-    Lang = select_lang(MyLang, HisLang),
-    NS_DB = if NS == ?NS_SERVER -> ?NS_SERVER_DIALBACK;
-	       true -> <<"">>
-	    end,
-    Version = case HisVersion of
-		  undefined -> undefined;
-		  {0,_} -> HisVersion;
-		  _ -> MyVersion
-	      end,
-    StreamStart = #stream_start{version = Version,
-				lang = Lang,
-				xmlns = NS,
-				stream_xmlns = ?NS_STREAM,
-				db_xmlns = NS_DB,
-				id = StreamID,
-				to = HisFrom,
-				from = HisTo},
-    State1 = State#{lang => Lang,
-		    stream_version => Version,
-		    stream_header_sent => true},
-    case socket_send(State1, StreamStart) of
-	ok -> State1;
-	{error, Why} -> process_stream_end({socket, Why}, State1)
+send_header(#{stream_id := StreamID} = State, #stream_start{to = HisTo, from = HisFrom}) ->
+	StreamStart = #stream_start{id = StreamID, to = HisFrom, from = HisTo},
+	case socket_send(State, StreamStart) of
+		ok -> State;
+		{error, Why} -> process_stream_end({socket, Why}, State)
     end;
 send_header(State, _) ->
     State.
@@ -1270,22 +1042,9 @@ format_sasl_error(<<"EXTERNAL">>, Err) ->
 format_sasl_error(Mech, Err) ->
     xmpp_sasl:format_error(Mech, Err).
 
--spec format_tls_error(atom() | binary()) -> list().
-format_tls_error(Reason) when is_atom(Reason) ->
-    format_inet_error(Reason);
-format_tls_error(Reason) ->
-    Reason.
-
 -spec format(io:format(), list()) -> binary().
 format(Fmt, Args) ->
     iolist_to_binary(io_lib:format(Fmt, Args)).
-
--spec lists_intersection(list(), list()) -> list().
-lists_intersection(L1, L2) ->
-    lists:filter(
-      fun(E) ->
-	      lists:member(E, L2)
-      end, L1).
 
 -spec identity([xmpp_sasl:sasl_property()]) -> binary().
 identity(Props) ->

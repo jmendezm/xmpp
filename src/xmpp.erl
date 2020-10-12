@@ -1,27 +1,3 @@
-%%%-------------------------------------------------------------------
-%%% @author Evgeny Khramtsov <ekhramtsov@process-one.net>
-%%% @doc
-%%%
-%%% @end
-%%% Created :  9 Dec 2015 by Evgeny Khramtsov <ekhramtsov@process-one.net>
-%%%
-%%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
-%%%
-%%% Licensed under the Apache License, Version 2.0 (the "License");
-%%% you may not use this file except in compliance with the License.
-%%% You may obtain a copy of the License at
-%%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
-%%%
-%%% Unless required by applicable law or agreed to in writing, software
-%%% distributed under the License is distributed on an "AS IS" BASIS,
-%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-%%% See the License for the specific language governing permissions and
-%%% limitations under the License.
-%%%
-%%%-------------------------------------------------------------------
-
 -module(xmpp).
 -behaviour(application).
 -dialyzer({nowarn_function, get_els/1}).
@@ -31,7 +7,7 @@
 -export([start/2, stop/1]).
 
 -export([make_iq_result/1, make_iq_result/2, make_error/2,
-	 decode/1, decode/3, encode/1, encode/2,
+	 decode/1, decode/2, encode/1, encode/2,
 	 get_type/1, get_to/1, get_from/1, get_id/1,
 	 get_lang/1, get_error/1, get_els/1, get_ns/1, get_meta/1, get_meta/2,
 	 get_meta/3, set_type/2, set_to/2, set_from/2, set_id/2,
@@ -39,8 +15,8 @@
 	 set_meta/2, put_meta/3, update_meta/3, del_meta/2,
 	 format_error/1, io_format_error/1, is_stanza/1, try_subtag/2,
 	 set_subtag/2, get_subtag/2, remove_subtag/2, has_subtag/2,
-	 decode_els/1, decode_els/3, pp/1, get_name/1, get_text/1,
-	 get_text/2, mk_text/1, mk_text/2, is_known_tag/1, is_known_tag/2,
+	 decode_els/1, decode_els/2, pp/1, get_name/1, get_text/1,
+	 get_text/2, is_known_tag/1, is_known_tag/2,
 	 append_subtags/2, prep_lang/1, register_codec/1, unregister_codec/1,
 	 set_tr_callback/1, format_stanza_error/1, format_stanza_error/2,
 	 format_stream_error/1, format_stream_error/2, format_sasl_error/1,
@@ -73,32 +49,32 @@
          err_unexpected_request/0, err_unexpected_request/2]).
 
 %% XMPP stream errors
--export([serr_bad_format/0, serr_bad_format/2,
-         serr_bad_namespace_prefix/0, serr_bad_namespace_prefix/2,
-         serr_conflict/0, serr_conflict/2,
-         serr_connection_timeout/0, serr_connection_timeout/2,
-         serr_host_gone/0, serr_host_gone/2,
-         serr_host_unknown/0, serr_host_unknown/2,
-         serr_improper_addressing/0, serr_improper_addressing/2,
-         serr_internal_server_error/0, serr_internal_server_error/2,
-         serr_invalid_from/0, serr_invalid_from/2,
-         serr_invalid_id/0, serr_invalid_id/2,
-         serr_invalid_namespace/0, serr_invalid_namespace/2,
-         serr_invalid_xml/0, serr_invalid_xml/2,
-         serr_not_authorized/0, serr_not_authorized/2,
-         serr_not_well_formed/0, serr_not_well_formed/2,
-         serr_policy_violation/0, serr_policy_violation/2,
-         serr_remote_connection_failed/0, serr_remote_connection_failed/2,
-         serr_reset/0, serr_reset/2,
-         serr_resource_constraint/0, serr_resource_constraint/2,
-         serr_restricted_xml/0, serr_restricted_xml/2,
-         serr_see_other_host/1, serr_see_other_host/3,
-         serr_system_shutdown/0, serr_system_shutdown/2,
-         serr_undefined_condition/0, serr_undefined_condition/2,
-         serr_unsupported_encoding/0, serr_unsupported_encoding/2,
-	 serr_unsupported_feature/0, serr_unsupported_feature/2,
-         serr_unsupported_stanza_type/0, serr_unsupported_stanza_type/2,
-         serr_unsupported_version/0, serr_unsupported_version/2]).
+-export([serr_bad_format/0, serr_bad_format/1,
+         serr_bad_namespace_prefix/0, serr_bad_namespace_prefix/1,
+         serr_conflict/0, serr_conflict/1,
+         serr_connection_timeout/0, serr_connection_timeout/1,
+         serr_host_gone/0, serr_host_gone/1,
+         serr_host_unknown/0, serr_host_unknown/1,
+         serr_improper_addressing/0, serr_improper_addressing/1,
+         serr_internal_server_error/0, serr_internal_server_error/1,
+         serr_invalid_from/0, serr_invalid_from/1,
+         serr_invalid_id/0, serr_invalid_id/1,
+         serr_invalid_namespace/0, serr_invalid_namespace/1,
+         serr_invalid_xml/0, serr_invalid_xml/1,
+         serr_not_authorized/0, serr_not_authorized/1,
+         serr_not_well_formed/0, serr_not_well_formed/1,
+         serr_policy_violation/0, serr_policy_violation/1,
+         serr_remote_connection_failed/0, serr_remote_connection_failed/1,
+         serr_reset/0, serr_reset/1,
+         serr_resource_constraint/0, serr_resource_constraint/1,
+         serr_restricted_xml/0, serr_restricted_xml/1,
+         serr_see_other_host/1, serr_see_other_host/2,
+         serr_system_shutdown/0, serr_system_shutdown/1,
+         serr_undefined_condition/0, serr_undefined_condition/1,
+         serr_unsupported_encoding/0, serr_unsupported_encoding/1,
+	 serr_unsupported_feature/0, serr_unsupported_feature/1,
+         serr_unsupported_stanza_type/0, serr_unsupported_stanza_type/1,
+         serr_unsupported_version/0, serr_unsupported_version/1]).
 
 -include("xmpp.hrl").
 -type reason_text() :: binary() | {io:format(), list()}.
@@ -119,7 +95,6 @@ start(_StartType, _StartArgs) ->
 	{ok, _} = application:ensure_all_started(ezlib),
 	ok = jid:start(),
 	ok = xmpp_uri:start(),
-	ok = xmpp_lang:start(),
 	p1_options:start_link(xmpp_config),
 	p1_options:insert(xmpp_config, debug, global, false),
 	p1_options:insert(xmpp_config, fqdn, global, []),
@@ -339,26 +314,25 @@ del_meta(#presence{meta = M} = Pres, K) ->
 
 -spec decode(xmlel() | xmpp_element()) -> xmpp_element().
 decode(El) ->
-    decode(El, ?NS_CLIENT, []).
+    decode(El, []).
 
--spec decode(xmlel() | xmpp_element(), binary(), [decode_option()]) ->
-		    xmpp_element().
-decode(#xmlel{} = El, TopXMLNS, Opts) ->
-    xmpp_codec:decode(El, TopXMLNS, Opts);
-decode(Pkt, _, _) ->
+-spec decode(xmlel() | xmpp_element(), [decode_option()]) -> xmpp_element().
+decode(#xmlel{} = El, Opts) ->
+    xmpp_codec:decode(El, Opts);
+decode(Pkt, _) ->
     Pkt.
 
 -spec decode_els(xmpp_element()) -> xmpp_element().
 decode_els(Pkt) ->
-    decode_els(Pkt, ?NS_CLIENT, fun is_known_tag/1).
+    decode_els(Pkt, fun is_known_tag/1).
 
 -type match_fun() :: fun((xmlel()) -> boolean()).
--spec decode_els(xmpp_element(), binary(), match_fun()) -> xmpp_element().
-decode_els(Pkt, TopXMLNS, MatchFun) ->
+-spec decode_els(xmpp_element(), match_fun()) -> xmpp_element().
+decode_els(Pkt, MatchFun) ->
     Els = lists:map(
 	    fun(#xmlel{} = El) ->
 		    case MatchFun(El) of
-			true ->	decode(El, TopXMLNS, []);
+			true ->	decode(El, []);
 			false -> El
 		    end;
 	       (El) ->
@@ -570,33 +544,6 @@ get_text(Text) ->
 -spec get_text([text()], binary()) -> binary().
 get_text(Text, Lang) ->
     get_text(Text, Lang, <<>>).
-
--spec mk_text(reason_text()) -> [text()].
-mk_text(Text) ->
-    mk_text(Text, <<"">>).
-
--spec mk_text(reason_text(), lang()) -> [text()].
-mk_text(<<"">>, _Lang) ->
-    [];
-mk_text({Format, Args}, Lang) ->
-    InFormat = iolist_to_binary(Format),
-    OutFormat = xmpp_tr:tr(Lang, InFormat),
-    InTxt = iolist_to_binary(io_lib:format(InFormat, Args)),
-    if InFormat == OutFormat ->
-	    [#text{data = InTxt, lang = <<"en">>}];
-       true ->
-	    OutTxt = iolist_to_binary(io_lib:format(OutFormat, Args)),
-	    [#text{data = OutTxt, lang = Lang},
-	     #text{data = InTxt, lang = <<"en">>}]
-    end;
-mk_text(InTxt, Lang) ->
-    OutTxt = xmpp_tr:tr(Lang, InTxt),
-    if OutTxt == InTxt ->
-	    [#text{data = InTxt, lang = <<"en">>}];
-       true ->
-	    [#text{data = OutTxt, lang = Lang},
-	     #text{data = InTxt, lang = <<"en">>}]
-    end.
 
 -spec pp(any()) -> iodata().
 pp(Term) ->
@@ -850,209 +797,209 @@ err_unexpected_request(Text, Lang) ->
 serr_bad_format() ->
     serr('bad-format').
 
--spec serr_bad_format(reason_text(), lang()) -> stream_error().
-serr_bad_format(Text, Lang) ->
-    serr('bad-format', Text, Lang).
+-spec serr_bad_format(reason_text()) -> stream_error().
+serr_bad_format(Text) ->
+    serr('bad-format', Text).
 
 -spec serr_bad_namespace_prefix() -> stream_error().
 serr_bad_namespace_prefix() ->
     serr('bad-namespace-prefix').
 
--spec serr_bad_namespace_prefix(reason_text(), lang()) -> stream_error().
-serr_bad_namespace_prefix(Text, Lang) ->
-    serr('bad-namespace-prefix', Text, Lang).
+-spec serr_bad_namespace_prefix(reason_text()) -> stream_error().
+serr_bad_namespace_prefix(Text) ->
+    serr('bad-namespace-prefix', Text).
 
 -spec serr_conflict() -> stream_error().
 serr_conflict() ->
     serr('conflict').
 
--spec serr_conflict(reason_text(), lang()) -> stream_error().
-serr_conflict(Text, Lang) ->
-    serr('conflict', Text, Lang).
+-spec serr_conflict(reason_text()) -> stream_error().
+serr_conflict(Text) ->
+    serr('conflict', Text).
 
 -spec serr_connection_timeout() -> stream_error().
 serr_connection_timeout() ->
     serr('connection-timeout').
 
--spec serr_connection_timeout(reason_text(), lang()) -> stream_error().
-serr_connection_timeout(Text, Lang) ->
-    serr('connection-timeout', Text, Lang).
+-spec serr_connection_timeout(reason_text()) -> stream_error().
+serr_connection_timeout(Text) ->
+    serr('connection-timeout', Text).
 
 -spec serr_host_gone() -> stream_error().
 serr_host_gone() ->
     serr('host-gone').
 
--spec serr_host_gone(reason_text(), lang()) -> stream_error().
-serr_host_gone(Text, Lang) ->
-    serr('host-gone', Text, Lang).
+-spec serr_host_gone(reason_text()) -> stream_error().
+serr_host_gone(Text) ->
+    serr('host-gone', Text).
 
 -spec serr_host_unknown() -> stream_error().
 serr_host_unknown() ->
     serr('host-unknown').
 
--spec serr_host_unknown(reason_text(), lang()) -> stream_error().
-serr_host_unknown(Text, Lang) ->
-    serr('host-unknown', Text, Lang).
+-spec serr_host_unknown(reason_text()) -> stream_error().
+serr_host_unknown(Text) ->
+    serr('host-unknown', Text).
 
 -spec serr_improper_addressing() -> stream_error().
 serr_improper_addressing() ->
     serr('improper-addressing').
 
--spec serr_improper_addressing(reason_text(), lang()) -> stream_error().
-serr_improper_addressing(Text, Lang) ->
-    serr('improper-addressing', Text, Lang).
+-spec serr_improper_addressing(reason_text()) -> stream_error().
+serr_improper_addressing(Text) ->
+    serr('improper-addressing', Text).
 
 -spec serr_internal_server_error() -> stream_error().
 serr_internal_server_error() ->
     serr('internal-server-error').
 
--spec serr_internal_server_error(reason_text(), lang()) -> stream_error().
-serr_internal_server_error(Text, Lang) ->
-    serr('internal-server-error', Text, Lang).
+-spec serr_internal_server_error(reason_text()) -> stream_error().
+serr_internal_server_error(Text) ->
+    serr('internal-server-error', Text).
 
 -spec serr_invalid_from() -> stream_error().
 serr_invalid_from() ->
     serr('invalid-from').
 
--spec serr_invalid_from(reason_text(), lang()) -> stream_error().
-serr_invalid_from(Text, Lang) ->
-    serr('invalid-from', Text, Lang).
+-spec serr_invalid_from(reason_text()) -> stream_error().
+serr_invalid_from(Text) ->
+    serr('invalid-from', Text).
 
 -spec serr_invalid_id() -> stream_error().
 serr_invalid_id() ->
     serr('invalid-id').
 
--spec serr_invalid_id(reason_text(), lang()) -> stream_error().
-serr_invalid_id(Text, Lang) ->
-    serr('invalid-id', Text, Lang).
+-spec serr_invalid_id(reason_text()) -> stream_error().
+serr_invalid_id(Text) ->
+    serr('invalid-id', Text).
 
 -spec serr_invalid_namespace() -> stream_error().
 serr_invalid_namespace() ->
     serr('invalid-namespace').
 
--spec serr_invalid_namespace(reason_text(), lang()) -> stream_error().
-serr_invalid_namespace(Text, Lang) ->
-    serr('invalid-namespace', Text, Lang).
+-spec serr_invalid_namespace(reason_text()) -> stream_error().
+serr_invalid_namespace(Text) ->
+    serr('invalid-namespace', Text).
 
 -spec serr_invalid_xml() -> stream_error().
 serr_invalid_xml() ->
     serr('invalid-xml').
 
--spec serr_invalid_xml(reason_text(), lang()) -> stream_error().
-serr_invalid_xml(Text, Lang) ->
-    serr('invalid-xml', Text, Lang).
+-spec serr_invalid_xml(reason_text()) -> stream_error().
+serr_invalid_xml(Text) ->
+    serr('invalid-xml', Text).
 
 -spec serr_not_authorized() -> stream_error().
 serr_not_authorized() ->
     serr('not-authorized').
 
--spec serr_not_authorized(reason_text(), lang()) -> stream_error().
-serr_not_authorized(Text, Lang) ->
-    serr('not-authorized', Text, Lang).
+-spec serr_not_authorized(reason_text()) -> stream_error().
+serr_not_authorized(Text) ->
+    serr('not-authorized', Text).
 
 -spec serr_not_well_formed() -> stream_error().
 serr_not_well_formed() ->
     serr('not-well-formed').
 
--spec serr_not_well_formed(reason_text(), lang()) -> stream_error().
-serr_not_well_formed(Text, Lang) ->
-    serr('not-well-formed', Text, Lang).
+-spec serr_not_well_formed(reason_text()) -> stream_error().
+serr_not_well_formed(Text) ->
+    serr('not-well-formed', Text).
 
 -spec serr_policy_violation() -> stream_error().
 serr_policy_violation() ->
     serr('policy-violation').
 
--spec serr_policy_violation(reason_text(), lang()) -> stream_error().
-serr_policy_violation(Text, Lang) ->
-    serr('policy-violation', Text, Lang).
+-spec serr_policy_violation(reason_text()) -> stream_error().
+serr_policy_violation(Text) ->
+    serr('policy-violation', Text).
 
 -spec serr_remote_connection_failed() -> stream_error().
 serr_remote_connection_failed() ->
     serr('remote-connection-failed').
 
--spec serr_remote_connection_failed(reason_text(), lang()) -> stream_error().
-serr_remote_connection_failed(Text, Lang) ->
-    serr('remote-connection-failed', Text, Lang).
+-spec serr_remote_connection_failed(reason_text()) -> stream_error().
+serr_remote_connection_failed(Text) ->
+    serr('remote-connection-failed', Text).
 
 -spec serr_reset() -> stream_error().
 serr_reset() ->
     serr('reset').
 
--spec serr_reset(reason_text(), lang()) -> stream_error().
-serr_reset(Text, Lang) ->
-    serr('reset', Text, Lang).
+-spec serr_reset(reason_text()) -> stream_error().
+serr_reset(Text) ->
+    serr('reset', Text).
 
 -spec serr_resource_constraint() -> stream_error().
 serr_resource_constraint() ->
     serr('resource-constraint').
 
--spec serr_resource_constraint(reason_text(), lang()) -> stream_error().
-serr_resource_constraint(Text, Lang) ->
-    serr('resource-constraint', Text, Lang).
+-spec serr_resource_constraint(reason_text()) -> stream_error().
+serr_resource_constraint(Text) ->
+    serr('resource-constraint', Text).
 
 -spec serr_restricted_xml() -> stream_error().
 serr_restricted_xml() ->
     serr('restricted-xml').
 
--spec serr_restricted_xml(reason_text(), lang()) -> stream_error().
-serr_restricted_xml(Text, Lang) ->
-    serr('restricted-xml', Text, Lang).
+-spec serr_restricted_xml(reason_text()) -> stream_error().
+serr_restricted_xml(Text) ->
+    serr('restricted-xml', Text).
 
 -spec serr_see_other_host(xmpp_host()) -> stream_error().
 serr_see_other_host(HostPort) ->
     serr(#'see-other-host'{host = HostPort}).
 
--spec serr_see_other_host(xmpp_host(), reason_text(), lang()) -> stream_error().
-serr_see_other_host(HostPort, Text, Lang) ->
-    serr(#'see-other-host'{host = HostPort}, Text, Lang).
+-spec serr_see_other_host(xmpp_host(), reason_text()) -> stream_error().
+serr_see_other_host(HostPort, Text) ->
+    serr(#'see-other-host'{host = HostPort}, Text).
 
 -spec serr_system_shutdown() -> stream_error().
 serr_system_shutdown() ->
     serr('system-shutdown').
 
--spec serr_system_shutdown(reason_text(), lang()) -> stream_error().
-serr_system_shutdown(Text, Lang) ->
-    serr('system-shutdown', Text, Lang).
+-spec serr_system_shutdown(reason_text()) -> stream_error().
+serr_system_shutdown(Text) ->
+    serr('system-shutdown', Text).
 
 -spec serr_undefined_condition() -> stream_error().
 serr_undefined_condition() ->
     serr('undefined-condition').
 
--spec serr_undefined_condition(reason_text(), lang()) -> stream_error().
-serr_undefined_condition(Text, Lang) ->
-    serr('undefined-condition', Text, Lang).
+-spec serr_undefined_condition(reason_text()) -> stream_error().
+serr_undefined_condition(Text) ->
+    serr('undefined-condition', Text).
 
 -spec serr_unsupported_encoding() -> stream_error().
 serr_unsupported_encoding() ->
     serr('unsupported-encoding').
 
--spec serr_unsupported_encoding(reason_text(), lang()) -> stream_error().
-serr_unsupported_encoding(Text, Lang) ->
-    serr('unsupported-encoding', Text, Lang).
+-spec serr_unsupported_encoding(reason_text()) -> stream_error().
+serr_unsupported_encoding(Text) ->
+    serr('unsupported-encoding', Text).
 
 -spec serr_unsupported_feature() -> stream_error().
 serr_unsupported_feature() ->
     serr('unsupported-feature').
 
--spec serr_unsupported_feature(reason_text(), lang()) -> stream_error().
-serr_unsupported_feature(Text, Lang) ->
-    serr('unsupported-feature', Text, Lang).
+-spec serr_unsupported_feature(reason_text()) -> stream_error().
+serr_unsupported_feature(Text) ->
+    serr('unsupported-feature', Text).
 
 -spec serr_unsupported_stanza_type() -> stream_error().
 serr_unsupported_stanza_type() ->
     serr('unsupported-stanza-type').
 
--spec serr_unsupported_stanza_type(reason_text(), lang()) -> stream_error().
-serr_unsupported_stanza_type(Text, Lang) ->
-    serr('unsupported-stanza-type', Text, Lang).
+-spec serr_unsupported_stanza_type(reason_text()) -> stream_error().
+serr_unsupported_stanza_type(Text) ->
+    serr('unsupported-stanza-type', Text).
 
 -spec serr_unsupported_version() -> stream_error().
 serr_unsupported_version() ->
     serr('unsupported-version').
 
--spec serr_unsupported_version(reason_text(), lang()) -> stream_error().
-serr_unsupported_version(Text, Lang) ->
-    serr('unsupported-version', Text, Lang).
+-spec serr_unsupported_version(reason_text()) -> stream_error().
+serr_unsupported_version(Text) ->
+    serr('unsupported-version', Text).
 
 %%%===================================================================
 %%% Internal functions
@@ -1073,10 +1020,9 @@ err(Type, Reason, Code, Text, Lang) ->
 serr(Reason) ->
     #stream_error{reason = Reason}.
 
--spec serr(atom() | 'see-other-host'(), reason_text(),
-	   binary()) -> stream_error().
-serr(Reason, Text, Lang) ->
-    #stream_error{reason = Reason, text = mk_text(Text, Lang)}.
+-spec serr(atom() | 'see-other-host'(), reason_text()) -> stream_error().
+serr(Reason, Text) ->
+    #stream_error{reason = Reason, text = Text}.
 
 -spec match_tag(xmlel() | xmpp_element(),
 		binary(), binary(), binary()) -> boolean().
