@@ -299,9 +299,7 @@ parse(SocketData, [El | Els]) when
 					      stringify_stream_element(El)]),
     self() ! {'$gen_event', El},
     parse(SocketData, Els);
-parse(#socket_state{xml_stream = XMLStream,
-		    socket = Socket,
-		    shaper = ShaperState} = SocketData, Data)
+parse(#socket_state{xml_stream = XMLStream, socket = Socket, shaper = ShaperState} = SocketData, Data)
   when is_binary(Data) ->
     ?dbg("(~s) Received XML on stream = ~p", [pp(SocketData), Data]),
     XMLStream1 = fxml_stream:parse(XMLStream, Data),
@@ -313,8 +311,7 @@ parse(#socket_state{xml_stream = XMLStream,
 	  end,
     case Ret of
 	ok ->
-	    {ok, SocketData#socket_state{xml_stream = XMLStream1,
-					 shaper = ShaperState1}};
+	    {ok, SocketData#socket_state{xml_stream = XMLStream1, shaper = ShaperState1}};
 	{error, _} = Err ->
 	    Err
     end.

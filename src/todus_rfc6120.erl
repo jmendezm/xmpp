@@ -17,271 +17,14 @@ do_decode(<<"p">>, El, Opts) ->
   decode_presence(Opts, El);
 
 do_decode(<<"a">>, El, Opts) ->
-  decode_sasl_auth(Opts, El);
-
-do_decode(<<"unsupported-version">>, El, Opts) ->
-    decode_stream_error_unsupported_version(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					    Opts, El);
-do_decode(<<"unsupported-stanza-type">>, El, Opts) ->
-    decode_stream_error_unsupported_stanza_type(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-						Opts, El);
-do_decode(<<"unsupported-feature">>, El, Opts) ->
-    decode_stream_error_unsupported_feature(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					    Opts, El);
-do_decode(<<"unsupported-encoding">>, El, Opts) ->
-    decode_stream_error_unsupported_encoding(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					     Opts, El);
-do_decode(<<"undefined-condition">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_undefined_condition(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					    Opts, El);
-do_decode(<<"system-shutdown">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_system_shutdown(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					Opts, El);
-do_decode(<<"see-other-host">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_see_other_host(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				       Opts, El);
-do_decode(<<"restricted-xml">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_restricted_xml(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				       Opts, El);
-do_decode(<<"resource-constraint">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_resource_constraint(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					    Opts, El);
-do_decode(<<"reset">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_reset(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-			      Opts, El);
-do_decode(<<"remote-connection-failed">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_remote_connection_failed(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-						 Opts, El);
-do_decode(<<"policy-violation">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_policy_violation(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					 Opts, El);
-do_decode(<<"not-well-formed">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_not_well_formed(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					Opts, El);
-do_decode(<<"not-authorized">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_not_authorized(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				       Opts, El);
-do_decode(<<"invalid-xml">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_invalid_xml(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				    Opts, El);
-do_decode(<<"invalid-namespace">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_invalid_namespace(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					  Opts, El);
-do_decode(<<"invalid-id">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_invalid_id(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				   Opts, El);
-do_decode(<<"invalid-from">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_invalid_from(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				     Opts, El);
-do_decode(<<"internal-server-error">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_internal_server_error(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					      Opts, El);
-do_decode(<<"improper-addressing">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_improper_addressing(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					    Opts, El);
-do_decode(<<"host-unknown">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_host_unknown(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				     Opts, El);
-do_decode(<<"host-gone">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_host_gone(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				  Opts, El);
-do_decode(<<"connection-timeout">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_connection_timeout(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					   Opts, El);
-do_decode(<<"conflict">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_conflict(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				 Opts, El);
-do_decode(<<"bad-namespace-prefix">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_bad_namespace_prefix(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-					     Opts, El);
-do_decode(<<"bad-format">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-streams">>, El, Opts) ->
-    decode_stream_error_bad_format(<<"urn:ietf:params:xml:ns:xmpp-streams">>,
-				   Opts, El);
-
+  decode_auth(Opts, El);
 
 do_decode(<<"error">>, El, Opts) ->
     decode_error(Opts, El);
 
-do_decode(<<"text">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_text(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-		      Opts, El);
-do_decode(<<"unexpected-request">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_unexpected_request(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				    Opts, El);
-do_decode(<<"undefined-condition">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_undefined_condition(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				     Opts, El);
-do_decode(<<"subscription-required">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_subscription_required(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				       Opts, El);
-do_decode(<<"service-unavailable">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_service_unavailable(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				     Opts, El);
-do_decode(<<"resource-constraint">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_resource_constraint(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				     Opts, El);
-do_decode(<<"remote-server-timeout">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_remote_server_timeout(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				       Opts, El);
-do_decode(<<"remote-server-not-found">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_remote_server_not_found(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-					 Opts, El);
-do_decode(<<"registration-required">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_registration_required(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				       Opts, El);
-do_decode(<<"redirect">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_redirect(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			  Opts, El);
-do_decode(<<"recipient-unavailable">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_recipient_unavailable(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				       Opts, El);
-do_decode(<<"policy-violation">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_policy_violation(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				  Opts, El);
-do_decode(<<"not-authorized">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_not_authorized(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				Opts, El);
-do_decode(<<"not-allowed">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_not_allowed(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			     Opts, El);
-do_decode(<<"not-acceptable">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_not_acceptable(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				Opts, El);
-do_decode(<<"jid-malformed">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_jid_malformed(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			       Opts, El);
-do_decode(<<"item-not-found">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_item_not_found(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				Opts, El);
-do_decode(<<"internal-server-error">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_internal_server_error(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-				       Opts, El);
-do_decode(<<"gone">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_gone(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-		      Opts, El);
-do_decode(<<"forbidden">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_forbidden(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			   Opts, El);
-do_decode(<<"feature-not-implemented">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_feature_not_implemented(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-					 Opts, El);
-do_decode(<<"conflict">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_conflict(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			  Opts, El);
-do_decode(<<"bad-request">>,
-	  <<"urn:ietf:params:xml:ns:xmpp-stanzas">>, El, Opts) ->
-    decode_error_bad_request(<<"urn:ietf:params:xml:ns:xmpp-stanzas">>,
-			     Opts, El);
+do_decode(<<"rpc">>, El, Opts) ->
+    decode_rpc(Opts, El);
 
-do_decode(<<"priority">>, <<"jabber:client">>, El,
-	  Opts) ->
-    decode_presence_priority(<<"jabber:client">>, Opts, El);
-do_decode(<<"priority">>, <<"jabber:server">>, El,
-	  Opts) ->
-    decode_presence_priority(<<"jabber:server">>, Opts, El);
-do_decode(<<"priority">>, <<"jabber:component:accept">>,
-	  El, Opts) ->
-    decode_presence_priority(<<"jabber:component:accept">>,
-			     Opts, El);
-do_decode(<<"status">>, <<"jabber:client">>, El,
-	  Opts) ->
-    decode_presence_status(<<"jabber:client">>, Opts, El);
-do_decode(<<"status">>, <<"jabber:server">>, El,
-	  Opts) ->
-    decode_presence_status(<<"jabber:server">>, Opts, El);
-do_decode(<<"status">>, <<"jabber:component:accept">>,
-	  El, Opts) ->
-    decode_presence_status(<<"jabber:component:accept">>,
-			   Opts, El);
-do_decode(<<"show">>, <<"jabber:client">>, El, Opts) ->
-    decode_presence_show(<<"jabber:client">>, Opts, El);
-do_decode(<<"show">>, <<"jabber:server">>, El, Opts) ->
-    decode_presence_show(<<"jabber:server">>, Opts, El);
-do_decode(<<"show">>, <<"jabber:component:accept">>, El,
-	  Opts) ->
-    decode_presence_show(<<"jabber:component:accept">>,
-			 Opts, El);
-
-
-do_decode(<<"thread">>, <<"jabber:client">>, El,
-	  Opts) ->
-    decode_message_thread(<<"jabber:client">>, Opts, El);
-do_decode(<<"thread">>, <<"jabber:server">>, El,
-	  Opts) ->
-    decode_message_thread(<<"jabber:server">>, Opts, El);
-do_decode(<<"thread">>, <<"jabber:component:accept">>,
-	  El, Opts) ->
-    decode_message_thread(<<"jabber:component:accept">>,
-			  Opts, El);
-do_decode(<<"body">>, <<"jabber:client">>, El, Opts) ->
-    decode_message_body(<<"jabber:client">>, Opts, El);
-do_decode(<<"body">>, <<"jabber:server">>, El, Opts) ->
-    decode_message_body(<<"jabber:server">>, Opts, El);
-do_decode(<<"body">>, <<"jabber:component:accept">>, El,
-	  Opts) ->
-    decode_message_body(<<"jabber:component:accept">>, Opts,
-			El);
-do_decode(<<"subject">>, <<"jabber:client">>, El,
-	  Opts) ->
-    decode_message_subject(<<"jabber:client">>, Opts, El);
-do_decode(<<"subject">>, <<"jabber:server">>, El,
-	  Opts) ->
-    decode_message_subject(<<"jabber:server">>, Opts, El);
-do_decode(<<"subject">>, <<"jabber:component:accept">>,
-	  El, Opts) ->
-    decode_message_subject(<<"jabber:component:accept">>,
-			   Opts, El);
-do_decode(<<"iq">>, <<"jabber:client">>, El, Opts) ->
-    decode_iq(<<"jabber:client">>, Opts, El);
-do_decode(<<"iq">>, <<"jabber:server">>, El, Opts) ->
-    decode_iq(<<"jabber:server">>, Opts, El);
-do_decode(<<"iq">>, <<"jabber:component:accept">>, El,
-	  Opts) ->
-    decode_iq(<<"jabber:component:accept">>, Opts, El);
 do_decode(Name, <<>>, _, _) ->
     erlang:error({xmpp_codec, {missing_tag_xmlns, Name}});
 do_decode(Name, XMLNS, _, _) ->
@@ -541,30 +284,6 @@ do_get_ns({presence, _, _, _, _, _, _, _, _, _, _}) ->
     <<"jabber:client">>;
 do_get_ns({redirect, _}) ->
     <<"urn:ietf:params:xml:ns:xmpp-stanzas">>;
-do_get_ns({sasl_abort}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_auth, _, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_challenge, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_failure, _, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_mechanisms, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_response, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({sasl_success, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
-do_get_ns({'see-other-host', _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-streams">>;
-do_get_ns({stanza_error, _, _, _, _, _, _}) ->
-    <<"jabber:client">>;
-do_get_ns({starttls, _}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-tls">>;
-do_get_ns({starttls_failure}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-tls">>;
-do_get_ns({starttls_proceed}) ->
-    <<"urn:ietf:params:xml:ns:xmpp-tls">>;
 do_get_ns({stream_error, _, _}) -> <<"jabber:client">>;
 do_get_ns({stream_features, _}) -> <<"jabber:client">>;
 do_get_ns({stream_start, _, _, _, _, Xmlns, _, _, _}) ->
@@ -717,20 +436,17 @@ enc_version({Maj, Min}) ->
       (integer_to_binary(Min))/binary>>.
 
 decode_stream_start(__Opts, {xmlel, <<"s:s">>, _attrs, _els}) ->
-	{From, To, Id} = decode_stream_start_attrs(_attrs, undefined, undefined, undefined),
-	#stream_start{from = From, to = To, id = Id}.
+	{From, Id} = decode_stream_start_attrs(_attrs, undefined, undefined),
+	#stream_start{from = From, id = Id}.
 
-decode_stream_start_attrs([{<<"from">>, _val} | _attrs], _From, To, Id) ->
-    decode_stream_start_attrs(_attrs, _val, To, Id);
-decode_stream_start_attrs([{<<"to">>, _val} | _attrs], From, _To, Id) ->
-    decode_stream_start_attrs(_attrs, From, _val, Id);
-decode_stream_start_attrs([{<<"id">>, _val} | _attrs], From, To, _Id) ->
-    decode_stream_start_attrs(_attrs, From, To, _val);
-decode_stream_start_attrs([_ | _attrs], From, To, Id) ->
-    decode_stream_start_attrs(_attrs, From, To, Id);
-decode_stream_start_attrs([], From, To, Id) ->
+decode_stream_start_attrs([{<<"from">>, _val} | _attrs], _From, Id) ->
+    decode_stream_start_attrs(_attrs, _val, Id);
+decode_stream_start_attrs([{<<"id">>, _val} | _attrs], From, _Id) ->
+    decode_stream_start_attrs(_attrs, From, _val);
+decode_stream_start_attrs([_ | _attrs], From, Id) ->
+    decode_stream_start_attrs(_attrs, From, Id);
+decode_stream_start_attrs([], From, Id) ->
     {decode_attr_from(From),
-     decode_attr_to(To),
      decode_attr_id(Id)}.
 
 encode_stream_start({stream_start, From, To, Id}) ->
@@ -750,34 +466,25 @@ remove_undefined_attrs([], Res) ->
 
 decode_attr_from(undefined) ->
     undefined;
-decode_attr_from(_val) ->
-    case catch jid:decode(_val) of
-      {'EXIT', _} ->
-	  erlang:error({xmpp_codec, {bad_attr_value, <<"f">>, <<"s:s">>}});
-      _res -> _res
-    end.
+decode_attr_from(Val) ->
+    Val.
 
 encode_attr_from(undefined) -> undefined;
-encode_attr_from(_val) -> {<<"f">>, jid:encode(_val)}.
+encode_attr_from(Val) -> {<<"f">>, Val}.
 
 decode_attr_to(undefined) ->
     undefined;
-decode_attr_to(_val) ->
-    case catch jid:decode(_val) of
-      {'EXIT', _} ->
-	  erlang:error({xmpp_codec,
-			{bad_attr_value, <<"to">>, <<"s:s">>}});
-      _res -> _res
-    end.
+decode_attr_to(Val) ->
+    Val.
 
 encode_attr_to(undefined) -> undefined;
-encode_attr_to(_val) -> {<<"to">>, jid:encode(_val)}.
+encode_attr_to(Val) -> {<<"to">>, Val}.
 
 decode_attr_id(undefined) -> <<>>;
-decode_attr_id(_val) -> _val.
+decode_attr_id(Val) -> Val.
 
 encode_attr_id(<<>>) -> undefined;
-encode_attr_id(_val) -> {<<"id">>, _val}.
+encode_attr_id(Val) -> {<<"id">>, Val}.
 
 decode_stream_error(__Opts, {xmlel, <<"s:e">>, _attrs, _els}) ->
   {Text, Reason} = decode_stream_error_els(__Opts, _els, [], undefined),
@@ -2910,6 +2617,39 @@ encode_presence_attr_type(online) -> {<<"t">>, <<"on">>};
 encode_presence_attr_type(offline) -> {<<"t">>, <<"off">>};
 encode_presence_attr_type(_) -> {<<"t">>, <<"on">>}.
 
+decode_auth(__Opts, {xmlel, <<"a">>, _attrs, _els}) ->
+  {Text} = decode_auth_els(__Opts, _els, <<>>),
+  {Type} = decode_auth_attrs(_attrs, undefined),
+  #auth_request{type = Type, text = Text}.
+
+decode_auth_attrs([{<<"type">>, _val} | _attrs], _Type) ->
+  decode_auth_attrs(_attrs, _val);
+decode_auth_attrs([_ | _attrs], Type) ->
+  decode_auth_attrs(_attrs, Type);
+decode_auth_attrs([], Type) ->
+  {decode_auth_attr_type(Type)}.
+
+decode_auth_attr_type(undefined) -> jwt;
+decode_auth_attr_type(_val) ->
+  case catch dec_auth_type(_val) of
+    {'EXIT', _} ->
+      erlang:error({xmpp_codec, {bad_attr_value, <<"type">>}});
+    _res -> _res
+  end.
+
+decode_auth_els(__Opts, [], Data) ->
+  decode_auth_cdata(Data);
+decode_auth_els(__Opts, [{xmlcdata, _data} | _els], Data) ->
+  decode_auth_els(__Opts, _els, <<Data/binary, _data/binary>>);
+decode_auth_els(__Opts, [_ | _els], Data) ->
+  decode_auth_els(__Opts, _els, Data).
+
+decode_auth_cdata(<<>>) -> <<>>;
+decode_auth_cdata(_val) -> _val.
+
+dec_auth_type(<<"jwt">>) -> jwt;
+dec_auth_type(_) -> jwt.
+
 decode_message(__Opts, {xmlel, <<"m">>, _attrs, _els}) ->
   {Body, __Els} = decode_message_els(__Opts, _els, [], []),
   {Id, Type, From, To} = decode_message_attrs(_attrs, undefined, undefined, undefined, undefined),
@@ -2945,9 +2685,7 @@ decode_message_attrs([], Id, Type, From, To) ->
      decode_attr_from(From),
      decode_attr_to(To)}.
 
-encode_message({message, Id, Type, Lang, From, To,
-		Subject, Body, Thread, __Els, _},
-	       __TopXMLNS) ->
+encode_message({message, Id, Type, From, To, Body, __Els}) ->
     __NewTopXMLNS = xmpp_codec:choose_top_xmlns(<<>>,
 						[<<"jabber:client">>,
 						 <<"jabber:server">>,
@@ -3037,6 +2775,68 @@ encode_message_body(Data) ->
 
 decode_body_cdata(<<>>) -> <<>>;
 decode_body_cdata(_val) -> _val.
+
+
+decode_rpc(__Opts, {xmlel, <<"rpc">>, _attrs, _els}) ->
+  __Els = decode_rpc_els(__Opts, _els, []),
+  {Id, Type, From, To, Lang} = decode_iq_attrs(__TopXMLNS, _attrs, undefined, undefined, undefined, undefined, undefined),
+  {iq, Id, Type, Lang, From, To, __Els, #{}}.
+
+decode_rpc_els(__Opts, [], __Els) ->
+  lists:reverse(__Els);
+decode_rpc_els(__Opts, [{xmlel, _name, _attrs, _} = _el | _els], __Els) ->
+  case proplists:get_bool(ignore_els, __Opts) of
+    true ->
+      decode_iq_els(__TopXMLNS, __Opts, _els, [_el | __Els]);
+    false ->
+      __XMLNS = xmpp_codec:get_attr(<<"xmlns">>, _attrs,
+        __TopXMLNS),
+      case xmpp_codec:get_mod(_name, __XMLNS) of
+        undefined ->
+          decode_iq_els(__TopXMLNS, __Opts, _els, [_el | __Els]);
+        Mod ->
+          decode_iq_els(__TopXMLNS, __Opts, _els,
+            [Mod:do_decode(_name, __XMLNS, _el, __Opts)
+              | __Els])
+      end
+  end;
+decode_rpc_els(__TopXMLNS, __Opts, [_ | _els], __Els) ->
+  decode_rpc_els(__TopXMLNS, __Opts, _els, __Els).
+
+decode_iq_attrs(__TopXMLNS, [{<<"id">>, _val} | _attrs],
+    _Id, Type, From, To, Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, _val, Type, From,
+    To, Lang);
+decode_iq_attrs(__TopXMLNS,
+    [{<<"type">>, _val} | _attrs], Id, _Type, From, To,
+    Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, Id, _val, From, To,
+    Lang);
+decode_iq_attrs(__TopXMLNS,
+    [{<<"from">>, _val} | _attrs], Id, Type, _From, To,
+    Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, Id, Type, _val, To,
+    Lang);
+decode_iq_attrs(__TopXMLNS, [{<<"to">>, _val} | _attrs],
+    Id, Type, From, _To, Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, Id, Type, From,
+    _val, Lang);
+decode_iq_attrs(__TopXMLNS,
+    [{<<"xml:lang">>, _val} | _attrs], Id, Type, From, To,
+    _Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, Id, Type, From, To,
+    _val);
+decode_iq_attrs(__TopXMLNS, [_ | _attrs], Id, Type,
+    From, To, Lang) ->
+  decode_iq_attrs(__TopXMLNS, _attrs, Id, Type, From, To,
+    Lang);
+decode_iq_attrs(__TopXMLNS, [], Id, Type, From, To,
+    Lang) ->
+  {decode_iq_attr_id(__TopXMLNS, Id),
+    decode_iq_attr_type(__TopXMLNS, Type),
+    decode_iq_attr_from(__TopXMLNS, From),
+    decode_iq_attr_to(__TopXMLNS, To),
+    'decode_iq_attr_xml:lang'(__TopXMLNS, Lang)}.
 
 
 

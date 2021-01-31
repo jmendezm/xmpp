@@ -43,12 +43,6 @@
 -record(auth_request, {type = <<>> :: binary(), text = <<>> :: binary()}).
 -type sasl_auth() :: #auth_request{}.
 
--record(mam_result, {xmlns = <<>> :: binary(),
-                     queryid = <<>> :: binary(),
-                     id = <<>> :: binary(),
-                     sub_els = [] :: [xmpp_element() | fxml:xmlel()]}).
--type mam_result() :: #mam_result{}.
-
 -record(sm_resume, {h :: non_neg_integer(),
                     previd = <<>> :: binary(),
                     xmlns = <<>> :: binary()}).
@@ -166,16 +160,8 @@
 -record(block, {items = [] :: [#block_item{}]}).
 -type block() :: #block{}.
 
--record(sasl_abort, {}).
--type sasl_abort() :: #sasl_abort{}.
-
 -record(receipt_request, {}).
 -type receipt_request() :: #receipt_request{}.
-
-
--record(sasl_failure, {reason :: 'aborted' | 'account-disabled' | 'bad-protocol' | 'credentials-expired' | 'encryption-required' | 'incorrect-encoding' | 'invalid-authzid' | 'invalid-mechanism' | 'malformed-request' | 'mechanism-too-weak' | 'not-authorized' | 'temporary-auth-failure' | 'undefined',
-                       text = [] :: [#text{}]}).
--type sasl_failure() :: #sasl_failure{}.
 
 -record(xevent, {offline = false :: boolean(),
                  delivered = false :: boolean(),
@@ -188,9 +174,6 @@
                        id = <<>> :: binary()}).
 -type mam_archived() :: #mam_archived{}.
 
--record(origin_id, {id = <<>> :: binary()}).
--type origin_id() :: #origin_id{}.
-
 -record(block_list, {items = [] :: [#block_item{}]}).
 -type block_list() :: #block_list{}.
 
@@ -198,13 +181,6 @@
                   ver :: 'undefined' | binary(),
                   os :: 'undefined' | binary()}).
 -type version() :: #version{}.
-
--record(legacy_auth_feature, {}).
--type legacy_auth_feature() :: #legacy_auth_feature{}.
-
--record(bind, {jid :: undefined | jid:jid(),
-               resource = <<>> :: binary()}).
--type bind() :: #bind{}.
 
 -record(media_uri, {type = <<>> :: binary(),
                     uri = <<>> :: binary()}).
@@ -219,9 +195,6 @@
 -record(xmpp_session, {optional = false :: boolean()}).
 -type xmpp_session() :: #xmpp_session{}.
 
-
-
-
 -record(mam_query, {xmlns = <<>> :: binary(),
                     id = <<>> :: binary(),
                     start :: undefined | erlang:timestamp(),
@@ -230,10 +203,6 @@
                     withtext :: 'undefined' | binary()
 }).
 -type mam_query() :: #mam_query{}.
-
-
--record(sasl_mechanisms, {list = [] :: [binary()]}).
--type sasl_mechanisms() :: #sasl_mechanisms{}.
 
 -record(offline_item, {node = <<>> :: binary(),
                        action :: 'remove' | 'undefined' | 'view'}).
@@ -277,70 +246,18 @@
                        sub_els = [] :: [xmpp_element() | fxml:xmlel()]}).
 -type stanza_error() :: #stanza_error{}.
 
--record(stream_error, {reason :: atom() | #'see-other-host'{},
-                       text = <<>> :: binary()}).
+-record(stream_error, {reason :: atom() | #'see-other-host'{}, text = <<>> :: binary()}).
 -type stream_error() :: #stream_error{}.
 
 -record(time, {tzo :: 'undefined' | {integer(),integer()},
                utc :: undefined | erlang:timestamp()}).
 -type time() :: #time{}.
 
--type xmpp_element() :: mix_join() |
-                        muc_actor() |
-                        roster_query() |
-                        jingle_s5b_candidate() |
-                        jingle_ft_file() |
-                        hash() |
-                        ps_subscribe() |
-                        ps_options() |
-                        disco_item() |
-                        avatar_meta() |
-                        delegation() |
-                        bob_data() |
-                        mix_client_join() |
-                        vcard_email() |
-                        oob_x() |
-                        gone() |
-                        vcard_temp() |
-                        vcard_adr() |
-                        sm_failed() |
-                        carbons_private() |
-                        muc_unsubscribe() |
-                        rsm_first() |
-                        carbons_sent() |
-                        vcard_org() |
-                        sm_resumed() |
-                        register() |
-                        jingle_error() |
-                        delay() |
-                        upload_file_too_large() |
-                        mix_setnick() |
-                        jingle_reason() |
-                        pubsub() |
-                        muc_user() |
-                        thumbnail() |
-                        iq() |
-                        muc_subscribe() |
-                        sasl_response() |
-                        db_result() |
-                        identity() |
-                        mam_result() |
-                        mix_destroy() |
-                        'see-other-host'() |
-                        sm_r() |
-                        stream_start() |
-                        ps_affiliation() |
-                        disco_info() |
-                        vcard_tel() |
-                        mix_participant() |
-                        presence() |
+-type xmpp_element() :: presence() |
                         nick() |
                         jingle_content() |
                         shim() |
                         delegation_query() |
-                        x509_register() |
-                        starttls() |
-                        xdata_option() |
                         credentials() |
                         sasl_failure() |
                         sasl_abort() |
@@ -350,91 +267,14 @@
                         compress() |
                         muc_decline() |
                         rsm_set() |
-                        mam_fin() |
-                        push_enable() |
-                        sasl_success() |
-                        ping() |
-                        vcard_logo() |
-                        time() |
-                        stat() |
-                        muc_destroy() |
-                        block_list() |
-                        stat_error() |
-                        last() |
-                        x509_cert_chain() |
-                        origin_id() |
-                        adhoc_actions() |
-                        upload_retry() |
-                        feature_sm() |
-                        text() |
-                        muc_invite() |
-                        ps_items() |
-                        feature_register() |
-                        xevent() |
-                        upload_request() |
-                        block() |
-                        mix_client_leave() |
                         ps_retract() |
                         stats() |
                         message() |
                         delegated() |
                         avatar_info() |
-                        carbons_enable() |
-                        db_feature() |
-                        carbons_disable() |
-                        hint() |
-                        jidprep() |
-                        mix() |
-                        vcard_key() |
-                        privilege_perm() |
-                        media() |
-                        ibb_data() |
-                        compressed() |
-                        ps_unsubscribe() |
-                        unblock() |
-                        ibb_close() |
-                        adhoc_note() |
-                        muc_item() |
-                        muc_subscriptions() |
-                        vcard_xupdate() |
-                        csi() |
-                        address() |
-                        privilege() |
-                        ps_subscription() |
-                        idle() |
-                        ibb_open() |
-                        roster_item() |
-                        mix_leave() |
-                        starttls_proceed() |
                         mix_create() |
                         db_verify() |
                         jingle_ft_range() |
-                        jingle_ft_description() |
-                        legacy_auth() |
-                        push_notification() |
-                        sm_a() |
-                        privacy_query() |
-                        mam_archived() |
-                        carbons_received() |
-                        x509_csr() |
-                        x509_revoke() |
-                        xdata_field() |
-                        avatar_data() |
-                        x509_request() |
-                        service() |
-                        rosterver_feature() |
-                        stanza_id() |
-                        jingle_s5b_transport() |
-                        muc_unique() |
-                        addresses() |
-                        bookmark_url() |
-                        compression() |
-                        sm_enabled() |
-                        jingle_ibb_transport() |
-                        muc_owner() |
-                        upload_slot_0() |
-                        legacy_auth_feature() |
-                        stream_features() |
                         bookmark_storage() |
                         privacy_list() |
                         feature_csi() |
@@ -445,60 +285,5 @@
                         search_item() |
                         offline() |
                         sasl_auth() |
-                        private() |
-                        jingle_ft_error() |
-                        sm_resume() |
-                        push_disable() |
-                        disco_items() |
-                        upload_slot() |
-                        ps_event() |
-                        search() |
-                        caps() |
-                        expire() |
-                        vcard_label() |
-                        receipt_response() |
-                        version() |
-                        bind() |
-                        sm_enable() |
-                        upload_request_0() |
-                        bookmark_conference() |
-                        x_conference() |
-                        forwarded() |
-                        report() |
-                        xmpp_session() |
-                        sasl_mechanisms() |
-                        offline_item() |
-                        avatar_pointer() |
-                        adhoc_command() |
-                        chatstate() |
-                        vcard_geo() |
-                        services() |
-                        compress_failure() |
-                        sic() |
-                        starttls_failure() |
-                        muc_admin() |
-                        ps_error() |
-                        ps_item() |
-                        mam_query() |
-                        pubsub_owner() |
-                        x509_ca_list() |
-                        vcard_sound() |
-                        ps_publish() |
-                        jingle_ft_received() |
-                        mam_prefs() |
-                        vcard_photo() |
-                        hash_used() |
-                        stream_error() |
-                        jingle_ft_checksum() |
-                        sasl_challenge() |
-                        block_item() |
                         receipt_request() |
-                        muc() |
-                        privacy_item() |
-                        redirect() |
-                        handshake() |
-                        stanza_error() |
-                        x509_challenge_failed() |
-                        xcaptcha() |
-                        bytestreams() |
-                        media_uri().
+                        muc().
