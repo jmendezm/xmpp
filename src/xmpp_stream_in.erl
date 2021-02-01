@@ -736,7 +736,7 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
 				ResourceChild = #xmlel{name = <<"resource">>, children = [{xmlcdata,NewR}]},
 				JIDChild = #xmlel{name = <<"jid">>, children = [{xmlcdata,JID}]},
 				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,SID}]},
-				Reply = #xmlel{name = <<"bind">>, attrs = [<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-session">>], children = [JIDChild,SIDChild,ResourceChild]},
+				Reply = #xmlel{name = <<"bind">>, attrs = [{<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-session">>}], children = [JIDChild,SIDChild,ResourceChild]},
 		    %% Reply = #bind{jid = jid:make(U, S, NewR)},
 		    State2 = send_pkt(State1, xmpp:make_iq_result(Pkt, Reply)),
 		    process_stream_established(State2);
