@@ -648,7 +648,7 @@ process_stream(#stream_start{to = #jid{server = Server, lserver = LServer},
 -spec process_element(xmpp_element(), state()) -> state().
 process_element(Pkt, #{stream_state := StateName, lang := Lang} = State) ->
     case Pkt of
-			#xmlel{name = <<"rebind">>} when StateName == wait_for_sasl_request ->
+	#rebind{} when StateName == wait_for_sasl_request ->
 					process_rebind(Pkt, State);
 	#starttls{} when StateName == wait_for_starttls;
 			 StateName == wait_for_sasl_request ->
@@ -761,29 +761,15 @@ process_bind(Pkt, State) ->
 	    send_error(State, Pkt, Err)
     end.
 
--spec process_rebind(xmpp_element(), state()) -> state().
-process_rebind(#xmlel{name = <<"rebind">>} = Pkt, #{xmlns := ?NS_CLIENT, lang := MyLang} = State) ->
-	JIDX = fxml:get_subtag(Pkt, <<"jid">>),
-	SIDX = fxml:get_subtag(Pkt, <<"sid">>),
-	case {JIDX,SIDX} of
-		_ when JIDX =:= false; SIDX =:= false ->
-			Err = xmpp:err_bad_request(),
-			send_error(State, Pkt, Err);
-		{J,S} ->
-			case jid:from_string(J) of
-				#jid{} = Jid ->
-					case callback(rebind, Jid, S, State) of
-						{ok, #{sid := {SID,_}} = State1} ->
-							Reply = #xmlel{name = <<"rebind">>, attrs = [{<<"sid">>,SID}]},
-							State2 = send_pkt(State1, Reply),
-							process_stream_established(State2);
-						{error, #stanza_error{} = Err, State1} ->
-							send_error(State1, Pkt, Err)
-					end;
-				error ->
-					Err = xmpp:err_bad_request(),
-					send_error(State, Pkt, Err)
-			end
+-spec process_rebind(fxml:xmlel(), state()) -> state().
+process_rebind(#rebind{jid = JID, sid = SID} = Pkt, State) ->
+	case callback(rebind, JID, SID, State) of
+		{ok, #{sid := {New_SID,_}} = State1} ->
+			Reply = #rebind{sid = New_SID},
+			State2 = send_pkt(State1, Reply),
+			process_stream_established(State2);
+		{error, #stanza_error{} = Err, State1} ->
+			send_error(State1, Pkt, Err)
 	end;
 process_rebind(Pkt, State) ->
 	try callback(handle_unbinded_packet, Pkt, State)

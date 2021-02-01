@@ -20,6 +20,10 @@
 	     meta = #{} :: map()}).
 -type iq() :: #iq{}.
 
+-record(rebind, {jid :: binary(),
+  sid :: binary()}).
+-type rebind() :: #rebind{}.
+
 -record(message, {id = <<>> :: binary(),
                   type = normal :: message_type(),
                   lang = <<>> :: binary(),

@@ -217,6 +217,8 @@ pp(Name, Arity) ->
 
 records() -> [].
 
+get_mod(<<"rebind">>, <<"t:rebind">>) ->
+  rebind;
 get_mod(<<"report">>, <<"urn:xmpp:reporting:0">>) ->
     xep0377;
 get_mod(<<"status">>, <<"jabber:server">>) -> rfc6120;
@@ -1561,6 +1563,7 @@ get_mod(<<"security-error">>,
 get_mod(Name, XMLNS) ->
     xmpp_codec_external:lookup(Name, XMLNS).
 
+get_mod({rebind,_,_}) -> rebind;
 get_mod({rosterver_feature}) -> rfc6121;
 get_mod({legacy_auth_feature}) -> xep0078;
 get_mod({carbons_disable}) -> xep0280;
