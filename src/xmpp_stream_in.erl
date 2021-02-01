@@ -104,6 +104,7 @@
 -callback check_password_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback check_password_digest_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback bind(binary(), state()) -> {ok, state()} | {error, stanza_error(), state()}.
+-callback rebind(jid(), binary(), state()) -> {ok, state()} | {error, stanza_error(), state()}.
 -callback compress_methods(state()) -> [binary()].
 -callback tls_options(state()) -> [proplists:property()].
 -callback tls_required(state()) -> boolean().
@@ -136,6 +137,7 @@
 		     check_password_fun/2,
 		     check_password_digest_fun/2,
 		     bind/2,
+         rebind/3,
 		     compress_methods/1,
 		     tls_options/1,
 		     tls_required/1,
@@ -646,6 +648,8 @@ process_stream(#stream_start{to = #jid{server = Server, lserver = LServer},
 -spec process_element(xmpp_element(), state()) -> state().
 process_element(Pkt, #{stream_state := StateName, lang := Lang} = State) ->
     case Pkt of
+			#xmlel{name = <<"rebind">>} when StateName == wait_for_sasl_request ->
+					process_rebind(Pkt, State);
 	#starttls{} when StateName == wait_for_starttls;
 			 StateName == wait_for_sasl_request ->
 	    process_starttls(State);
@@ -726,9 +730,13 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
     try xmpp:try_subtag(Pkt, #bind{}) of
 	#bind{resource = R} ->
 	    case callback(bind, R, State) of
-		{ok, #{user := U, server := S, resource := NewR} = State1}
+		{ok, #{user := U, server := S, resource := NewR, sid := {SID,_} } = State1}
 		  when NewR /= <<"">> ->
-		    Reply = #bind{jid = jid:make(U, S, NewR)},
+				JID = jid:to_string(jid:make(U, S, NewR)),
+				JIDChild = #xmlel{name = <<"jid">>, children = [{xmlcdata,JID}]},
+				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,SID}]},
+				Reply = #xmlel{name = <<"bind">>, attrs = [<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-bind">>], children = [JIDChild,SIDChild]},
+		    %% Reply = #bind{jid = jid:make(U, S, NewR)},
 		    State2 = send_pkt(State1, xmpp:make_iq_result(Pkt, Reply)),
 		    process_stream_established(State2);
 		{error, #stanza_error{} = Err, State1} ->
@@ -752,6 +760,37 @@ process_bind(Pkt, State) ->
 	    Err = xmpp:err_not_authorized(),
 	    send_error(State, Pkt, Err)
     end.
+
+-spec process_rebind(xmpp_element(), state()) -> state().
+process_rebind(#xmlel{name = <<"rebind">>} = Pkt, #{xmlns := ?NS_CLIENT, lang := MyLang} = State) ->
+	JIDX = fxml:get_subtag(Pkt, <<"jid">>),
+	SIDX = fxml:get_subtag(Pkt, <<"sid">>),
+	case {JIDX,SIDX} of
+		_ when JIDX =:= false; SIDX =:= false ->
+			Err = xmpp:err_bad_request(),
+			send_error(State, Pkt, Err);
+		{J,S} ->
+			case jid:from_string(J) of
+				#jid{} = Jid ->
+					case callback(rebind, Jid, S, State) of
+						{ok, #{sid := {SID,_}} = State1} ->
+							Reply = #xmlel{name = <<"rebind">>, attrs = [{<<"sid">>,SID}]},
+							State2 = send_pkt(State1, Reply),
+							process_stream_established(State2);
+						{error, #stanza_error{} = Err, State1} ->
+							send_error(State1, Pkt, Err)
+					end;
+				error ->
+					Err = xmpp:err_bad_request(),
+					send_error(State, Pkt, Err)
+			end
+	end;
+process_rebind(Pkt, State) ->
+	try callback(handle_unbinded_packet, Pkt, State)
+	catch _:{?MODULE, undef} ->
+		Err = xmpp:err_not_authorized(),
+		send_error(State, Pkt, Err)
+	end.
 
 -spec process_handshake(handshake(), state()) -> state().
 process_handshake(#handshake{data = Digest},
