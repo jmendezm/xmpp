@@ -104,7 +104,7 @@
 -callback check_password_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback check_password_digest_fun(xmpp_sasl:mechanism(), state()) -> fun().
 -callback bind(binary(), state()) -> {ok, state()} | {error, stanza_error(), state()}.
--callback rebind(jid(), binary(), state()) -> {ok, state()} | {error, stanza_error(), state()}.
+-callback rebind(jid(), binary(), state()) -> {ok, state()} | {error, atom(), state()}.
 -callback compress_methods(state()) -> [binary()].
 -callback tls_options(state()) -> [proplists:property()].
 -callback tls_required(state()) -> boolean().
@@ -733,9 +733,10 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
 		{ok, #{user := U, server := S, resource := NewR, sid := {SID,_} } = State1}
 		  when NewR /= <<"">> ->
 				JID = jid:to_string(jid:make(U, S, NewR)),
+				ResourceChild = #xmlel{name = <<"re">>, children = [{xmlcdata,NewR}]},
 				JIDChild = #xmlel{name = <<"jid">>, children = [{xmlcdata,JID}]},
 				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,SID}]},
-				Reply = #xmlel{name = <<"bind">>, attrs = [<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-bind">>], children = [JIDChild,SIDChild]},
+				Reply = #xmlel{name = <<"b1">>, attrs = [<<"xmlns">>,<<"x4">>], children = [JIDChild,SIDChild,ResourceChild]},
 		    %% Reply = #bind{jid = jid:make(U, S, NewR)},
 		    State2 = send_pkt(State1, xmpp:make_iq_result(Pkt, Reply)),
 		    process_stream_established(State2);
@@ -768,8 +769,8 @@ process_rebind(#rebind{jid = JID, sid = SID} = Pkt, State) ->
 			Reply = #rebind{sid = New_SID},
 			State2 = send_pkt(State1, Reply),
 			process_stream_established(State2);
-		{error, #stanza_error{} = Err, State1} ->
-			send_error(State1, Pkt, Err)
+		{error, not_found, State1} ->
+			send_pkt(State1, #xmlel{name = <<"rebind">>, attrs = [{<<"error">>,<<"404">>}]})
 	end;
 process_rebind(Pkt, State) ->
 	try callback(handle_unbinded_packet, Pkt, State)
