@@ -733,10 +733,10 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
 		{ok, #{user := U, server := S, resource := NewR, sid := {SID,_} } = State1}
 		  when NewR /= <<"">> ->
 				JID = jid:to_string(jid:make(U, S, NewR)),
-				ResourceChild = #xmlel{name = <<"re">>, children = [{xmlcdata,NewR}]},
+				ResourceChild = #xmlel{name = <<"resource">>, children = [{xmlcdata,NewR}]},
 				JIDChild = #xmlel{name = <<"jid">>, children = [{xmlcdata,JID}]},
 				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,SID}]},
-				Reply = #xmlel{name = <<"b1">>, attrs = [<<"xmlns">>,<<"x4">>], children = [JIDChild,SIDChild,ResourceChild]},
+				Reply = #xmlel{name = <<"bind">>, attrs = [<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-session">>], children = [JIDChild,SIDChild,ResourceChild]},
 		    %% Reply = #bind{jid = jid:make(U, S, NewR)},
 		    State2 = send_pkt(State1, xmpp:make_iq_result(Pkt, Reply)),
 		    process_stream_established(State2);
