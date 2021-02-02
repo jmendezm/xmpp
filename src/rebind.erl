@@ -36,7 +36,23 @@ decode_rebind_attr_jid(_val) ->
 decode_rebind_attr_sid(undefined) ->
   erlang:error({xmpp_codec, {missing_attr, <<"sid">>, <<"rebind">>, <<"t:rebind">>}});
 decode_rebind_attr_sid(_val) ->
-  _val.
+  case binary:split(_val,<<"-">>,[global]) of
+    [_,_,_] = SID ->
+      [S1,S2,S3] = parse_sid(SID, []),
+      {S1,S2,S3};
+    _ ->
+      erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}})
+  end.
+
+parse_sid([C|R], Res) ->
+  try binary_to_integer(C) of
+    Int ->
+      parse_sid(R, [Int | Res])
+  catch _:_ ->
+    erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}})
+  end;
+parse_sid([], Res) ->
+  Res.
 
 tags() ->
   [{<<"rebind">>, <<"t:rebind">>}].
