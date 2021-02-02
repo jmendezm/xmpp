@@ -734,9 +734,7 @@ process_bind(#iq{type = set, sub_els = [_]} = Pkt,
 		  when NewR /= <<"">> ->
 				JID = jid:to_string(jid:make(U, S, NewR)),
 				JIDChild = #xmlel{name = <<"jid">>, children = [{xmlcdata,JID}]},
-				{S1,S2,S3} = SID,
-				SID_bin = <<S1/integer,"-",S2/integer,"-",S3/integer>>,
-				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,SID_bin}]},
+				SIDChild = #xmlel{name = <<"sid">>, children = [{xmlcdata,sid_to_binary(SID)}]},
 				Reply = #xmlel{name = <<"bind">>, attrs = [{<<"xmlns">>,<<"urn:ietf:params:xml:ns:xmpp-session">>}], children = [JIDChild,SIDChild]},
 		    %% Reply = #bind{jid = jid:make(U, S, NewR)},
 		    State2 = send_pkt(State1, xmpp:make_iq_result(Pkt, Reply)),
@@ -762,6 +760,12 @@ process_bind(Pkt, State) ->
 	    Err = xmpp:err_not_authorized(),
 	    send_error(State, Pkt, Err)
     end.
+
+sid_to_binary({S1,S2,S3}) ->
+	S1B = integer_to_binary(S1),
+	S2B = integer_to_binary(S2),
+	S3B = integer_to_binary(S3),
+	<<S1B/binary,"-",S2B/binary,"-",S3B/binary>>.
 
 -spec process_rebind(fxml:xmlel(), state()) -> state().
 process_rebind(#rebind{jid = JID, sid = SID} = Pkt, State) ->
