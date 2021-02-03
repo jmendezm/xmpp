@@ -64,8 +64,8 @@ do_encode({rebind, _JID, SID}, _TopXMLNS) ->
 encode_rebind_attr_sid(<<>>) ->
   erlang:error({xmpp_codec, {missing_attr, <<"sid">>, <<"rebind">>, <<"t:rebind">>}});
 encode_rebind_attr_sid({S1, S2, S3}) ->
-  [S1, S2, S3] = parse_sid_encode([S1, S2, S3], []),
-  <<S1/binary, "-", S2/binary, "-", S3/binary>>;
+  [S1Bin, S2Bin, S3Bin] = parse_sid_encode([S1, S2, S3], []),
+  <<S1Bin/binary, "-", S2Bin/binary, "-", S3Bin/binary>>;
 encode_rebind_attr_sid(_) ->
   erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}}).
 
