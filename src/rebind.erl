@@ -58,7 +58,8 @@ tags() ->
   [{<<"rebind">>, <<"t:rebind">>}].
 
 do_encode({rebind, _JID, SID}, _TopXMLNS) ->
-  {xmlel, <<"rebind">>, [{<<"sid">>, SID}], []}.
+  SidBin = encode_rebind_attr_sid(SID),
+  {xmlel, <<"rebind">>, [{<<"sid">>, SidBin}], []}.
 
 encode_rebind_attr_sid(<<>>) ->
   erlang:error({xmpp_codec, {missing_attr, <<"sid">>, <<"rebind">>, <<"t:rebind">>}});
