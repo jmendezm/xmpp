@@ -31,8 +31,9 @@ encode({xmlel, _, _, _} = El, _) ->
 encode({xmlcdata, _} = CData, _) -> CData;
 encode(El, TopXMLNS) ->
   Mod = get_mod(El),
-  Aux = Mod:do_encode(El, TopXMLNS),
-  todus_codec:encode(Aux).
+  Mod:do_encode(El, TopXMLNS).
+  %Aux = Mod:do_encode(El, TopXMLNS),
+  %todus_codec:encode(Aux).
 
 get_name(El) -> Mod = get_mod(El), Mod:do_get_name(El).
 
