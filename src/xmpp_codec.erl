@@ -9,9 +9,9 @@ decode(El) -> decode(El, <<>>, []).
 
 decode(El, Opts) -> decode(El, <<>>, Opts).
 
-decode(El1, TopXMLNS, Opts) ->
+decode(El, TopXMLNS, Opts) ->
 
-  El = todus_codec:decode(El1),
+  %El = todus_codec:decode(El1),
   {xmlel, Name, Attrs, _} = El,
 
   XMLNS = get_attr(<<"xmlns">>, Attrs, TopXMLNS),
@@ -26,7 +26,8 @@ decode(El1, TopXMLNS, Opts) ->
 encode(El) -> encode(El, <<>>).
 
 encode({xmlel, _, _, _} = El, _) ->
-  todus_codec:encode(El);
+  El;
+  %todus_codec:encode(El);
 encode({xmlcdata, _} = CData, _) -> CData;
 encode(El, TopXMLNS) ->
   Mod = get_mod(El),
@@ -219,6 +220,8 @@ records() -> [].
 
 get_mod(<<"rebind">>, <<"t:rebind">>) ->
   rebind;
+get_mod(<<"bind">>, <<"t:bind">>) ->
+  todus_bind;
 get_mod(<<"report">>, <<"urn:xmpp:reporting:0">>) ->
     xep0377;
 get_mod(<<"status">>, <<"jabber:server">>) -> rfc6120;
