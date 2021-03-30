@@ -36,12 +36,10 @@ decode_rebind_attr_jid(_val) ->
 decode_rebind_attr_sid(undefined) ->
   erlang:error({xmpp_codec, {missing_attr, <<"sid">>, <<"rebind">>, <<"t:rebind">>}});
 decode_rebind_attr_sid(_val) ->
-  case binary:split(_val, <<"-">>, [global]) of
-    [_, _, _] = SID ->
-      [S1, S2, S3] = parse_sid(SID, []),
-      {S1, S2, S3};
-    _ ->
-      erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}})
+  try binary_to_term(base64:decode(_val), [safe]) of
+    Term -> Term
+  catch _:_ ->
+    erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}})
   end.
 
 parse_sid([C | R], Res) ->
@@ -63,9 +61,8 @@ do_encode({rebind, _JID, SID}, _TopXMLNS) ->
 
 encode_rebind_attr_sid(<<>>) ->
   erlang:error({xmpp_codec, {missing_attr, <<"sid">>, <<"rebind">>, <<"t:rebind">>}});
-encode_rebind_attr_sid({S1, S2, S3}) ->
-  [S1Bin, S2Bin, S3Bin] = parse_sid_encode([S1, S2, S3], []),
-  <<S1Bin/binary, "-", S2Bin/binary, "-", S3Bin/binary>>;
+encode_rebind_attr_sid({_,_} = SID) ->
+  base64:encode(term_to_binary(SID));
 encode_rebind_attr_sid(_) ->
   erlang:error({xmpp_codec, {bad_attr_value, <<"sid">>, <<"rebind">>, <<"t:rebind">>}}).
 
