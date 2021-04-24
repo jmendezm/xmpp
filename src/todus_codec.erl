@@ -23,7 +23,10 @@ mapa_decode(<<"s">>) -> <<"starttls">>;
 mapa_decode(<<"s1">>) -> <<"session">>;
 mapa_decode(<<"ah">>) -> <<"auth">>;
 mapa_decode(<<"x1">>) -> <<"http://etherx.jabber.org/streams">>;
-mapa_decode(<<"x2">>) -> <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
+
+mapa_decode(<<"x2">>) -> <<"urn:ietf:params:xml:ns:xmpp-sasl">>; % Delete this
+mapa_decode(<<"ah:ns">>) -> <<"urn:ietf:params:xml:ns:xmpp-sasl">>;
+
 mapa_decode(<<"x3">>) -> <<"urn:ietf:params:xml:ns:xmpp-tls">>;
 mapa_decode(<<"x4">>) -> <<"urn:ietf:params:xml:ns:xmpp-bind">>;
 mapa_decode(<<"x5">>) -> <<"urn:ietf:params:xml:ns:xmpp-session">>;
