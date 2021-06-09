@@ -6,7 +6,7 @@
 %%% Created :  9 Dec 2015 by Evgeny Khramtsov <ekhramtsov@process-one.net>
 %%%
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -113,10 +113,6 @@
 %%%===================================================================
 start(_StartType, _StartArgs) ->
     try
-	{ok, _} = application:ensure_all_started(fast_xml),
-	{ok, _} = application:ensure_all_started(stringprep),
-	{ok, _} = application:ensure_all_started(fast_tls),
-	{ok, _} = application:ensure_all_started(ezlib),
 	ok = jid:start(),
 	ok = xmpp_uri:start(),
 	ok = xmpp_lang:start(),

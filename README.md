@@ -49,7 +49,7 @@ from release to release. The stable API will be denoted by `2.x` tag in the futu
 
 # Dependency
 
-You need at least Erlang OTP 20.
+You need at least Erlang OTP 19.0.
 
 # Compiling
 
@@ -301,6 +301,7 @@ XMPP elements from the following documents are supported:
 - [XEP-0313](https://xmpp.org/extensions/xep-0313.html):  Message Archive Management
 - [XEP-0319](https://xmpp.org/extensions/xep-0319.html):  Last User Interaction in Presence
 - [XEP-0328](https://xmpp.org/extensions/xep-0328.html):  JID Prep
+- [XEP-0333](https://xmpp.org/extensions/xep-0333.html):  Chat Markers
 - [XEP-0334](https://xmpp.org/extensions/xep-0334.html):  Message Processing Hints
 - [XEP-0352](https://xmpp.org/extensions/xep-0352.html):  Client State Indication
 - [XEP-0355](https://xmpp.org/extensions/xep-0355.html):  Namespace Delegation
@@ -312,6 +313,7 @@ XMPP elements from the following documents are supported:
 - [XEP-0377](https://xmpp.org/extensions/xep-0377.html):  Spam Reporting
 - [XEP-0405](https://xmpp.org/extensions/xep-0405.html):  MIX: Participant Server Requirements
 - [XEP-0417](https://xmpp.org/extensions/xep-0417.html):  E2E Authentication in XMPP: Certificate Issuance and Revocation
+- [XEP-0430](https://xmpp.org/extensions/xep-0430.html):  Inbox
 - [draft-cridland-xmpp-session-01](https://tools.ietf.org/html/draft-cridland-xmpp-session-01): XMPP Session Establishment
 
 As well as some proprietary extensions from [ProcessOne](https://www.process-one.net)

@@ -1,3 +1,70 @@
+# Version 1.5.3
+
+* Updating fast_tls to version 1.1.12.
+* Updating fast_xml to version 1.1.46.
+* Updating p1_utils to version 1.0.22.
+* Updating stringprep to version 1.0.25.
+* Fix spec to match the current source code, as reportd by Dialyzer
+* xmpp uses p1_options, so Dialyzer reports some false warnings
+* Fix return value when skipping queued tcp packet to already closed socket
+
+# Version 1.5.2
+
+* Updating fast_tls to version 1.1.11.
+* Allow to free socket/parser/tls when session get detached
+* Add support for XEP-0430: Inbox
+* Add support for XEP-0333: Chat Markers
+* Add missing applicaitons to xmpp.app
+* Fix timezone in timestamp used by XEP-0202
+* Don't throw exception when client send invalid lenght sasl response
+
+# Version 1.5.1
+
+* Fix issues with scram *-PLUS
+
+# Version 1.5.0
+
+* Updating p1_utils to version 1.0.21.
+* Updating stringprep to version 1.0.24.
+* Updating fast_tls to version 1.1.10.
+* Updating fast_xml to version 1.1.45.
+* Add support for scram-sha-256/512-{plus}
+
+# Version 1.4.10
+
+* Updating ezlib to version 1.0.9.
+* Updating fast_tls to version 1.1.9.
+* Updating fast_xml to version 1.1.44.
+* Updating stringprep to version 1.0.23.
+* Add support for MAM Flipped Pages
+* Exclude old OTP releases from Travis
+* Support building specs with rebar3
+
+# Version 1.4.9
+
+* Updating p1_utils to version 1.0.20.
+* Updating fast_xml to version 1.1.43.
+* Updating fast_tls to version 1.1.8.
+* Updating stringprep to version 1.0.22.
+
+# Version 1.4.8
+
+* Fixes to compile with Erlang/OTP 23.0
+* updating ezlib to version 1.0.8.
+* updating fast_tls to version 1.1.7.
+* updating fast_xml to version 1.1.42.
+* updating stringprep to version 1.0.21.
+* Replace bad-protocol sasl errors with not-authorized
+* Add Travis setup, and set Erlang/OTP 19.0 as lowest supported version
+
+# Version 1.4.7
+
+* Updating fast_tls to version 1.1.6.
+* Updating p1_utils to version 1.0.19.
+* Updating fast_xml to version 1.1.41.
+* Updating stringprep to version 1.0.20.
+* Fix compatibility issues with Erlang 23
+
 # Version 1.4.6
 
 * Updating fast_tls to version 1.1.5.

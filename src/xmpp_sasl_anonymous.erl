@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @author Magnus Henoch <henoch@dtek.chalmers.se>
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@
 -behaviour(xmpp_sasl).
 -protocol({xep, 175, '1.2'}).
 
--export([mech_new/4, mech_step/2]).
+-export([mech_new/6, mech_step/2]).
 
 -record(state, {server = <<"">> :: binary()}).
 
-mech_new(Host, _GetPassword, _CheckPassword, _CheckPasswordDigest) ->
+mech_new(_Mech, _Socket, Host, _GetPassword, _CheckPassword, _CheckPasswordDigest) ->
     #state{server = Host}.
 
 mech_step(#state{}, _ClientIn) ->

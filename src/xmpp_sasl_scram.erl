@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @author Stephen Röttger <stephen.roettger@googlemail.com>
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 -author('stephen.roettger@googlemail.com').
 -protocol({rfc, 5802}).
 
--export([mech_new/4, mech_step/2, format_error/1]).
+-export([mech_new/6, mech_step/2, format_error/1]).
 
 -include("scram.hrl").
 
@@ -30,6 +30,9 @@
 
 -record(state,
 	{step = 2              :: 2 | 4,
+         algo = sha            :: sha | sha256 | sha512,
+	 plus = false          :: boolean(),
+	 plus_data = <<>>      :: binary(),
          stored_key = <<"">>   :: binary(),
          server_key = <<"">>   :: binary(),
          username = <<"">>     :: binary(),
@@ -45,13 +48,14 @@
 -type error_reason() :: unsupported_extension | bad_username |
 			not_authorized | saslprep_failed |
 			parser_failed | bad_attribute |
-			nonce_mismatch | bad_channel_binding.
+			nonce_mismatch | bad_channel_binding |
+                        incompatible_mechs.
 
 -export_type([error_reason/0]).
 
 -spec format_error(error_reason()) -> {atom(), binary()}.
 format_error(unsupported_extension) ->
-    {'bad-protocol', <<"Unsupported extension">>};
+    {'not-authorized', <<"Unsupported extension">>};
 format_error(bad_username) ->
     {'invalid-authzid', <<"Malformed username">>};
 format_error(not_authorized) ->
@@ -59,27 +63,50 @@ format_error(not_authorized) ->
 format_error(saslprep_failed) ->
     {'not-authorized', <<"SASLprep failed">>};
 format_error(parser_failed) ->
-    {'bad-protocol', <<"Response decoding failed">>};
+    {'not-authorized', <<"Response decoding failed">>};
 format_error(bad_attribute) ->
-    {'bad-protocol', <<"Malformed or unexpected attribute">>};
+    {'not-authorized', <<"Malformed or unexpected attribute">>};
 format_error(nonce_mismatch) ->
-    {'bad-protocol', <<"Nonce mismatch">>};
+    {'not-authorized', <<"Nonce mismatch">>};
 format_error(bad_channel_binding) ->
-    {'bad-protocol', <<"Invalid channel binding">>}.
+    {'not-authorized', <<"Invalid channel binding">>};
+format_error(incompatible_mechs) ->
+    {'not-authorized', <<"Incompatible SCRAM methods">>}.
 
-mech_new(_Host, GetPassword, _CheckPassword, _CheckPasswordDigest) ->
-    #state{step = 2, get_password = GetPassword}.
+mech_new(Mech, Socket, _Host, GetPassword, _CheckPassword, _CheckPasswordDigest) ->
+    {Algo, Plus} =
+    case Mech of
+	<<"SCRAM-SHA-1">> -> {sha, false};
+	<<"SCRAM-SHA-1-PLUS">> -> {sha, true};
+	<<"SCRAM-SHA-256">> -> {sha256, false};
+	<<"SCRAM-SHA-256-PLUS">> -> {sha256, true};
+	<<"SCRAM-SHA-512">> -> {sha512, false};
+	<<"SCRAM-SHA-512-PLUS">> -> {sha512, true}
+    end,
+    PlusData = case Plus of
+		   true ->
+		       case xmpp_socket:get_tls_last_message(Socket, peer) of
+			   {ok, Data} -> Data;
+			   _ -> <<>>
+		       end;
+		   _ ->
+		       <<>>
+	       end,
+    #state{step = 2, get_password = GetPassword, algo = Algo,
+	   plus = Plus, plus_data = PlusData}.
 
-mech_step(#state{step = 2} = State, ClientIn) ->
+mech_step(#state{step = 2, algo = Algo} = State, ClientIn) ->
     case re:split(ClientIn, <<",">>, [{return, binary}]) of
       [_CBind, _AuthorizationIdentity, _UserNameAttribute, _ClientNonceAttribute, ExtensionAttribute | _]
 	  when ExtensionAttribute /= <<"">> ->
 	  {error, unsupported_extension};
-      [CBind, _AuthorizationIdentity, UserNameAttribute, ClientNonceAttribute | _]
-	  when (CBind == <<"y">>) or (CBind == <<"n">>) ->
-	  case parse_attribute(UserNameAttribute) of
-	    {error, Reason} -> {error, Reason};
-	    {_, EscapedUserName} ->
+      [CBind, _AuthorizationIdentity, UserNameAttribute, ClientNonceAttribute | _] ->
+          case {cbind_valid(State, CBind), parse_attribute(UserNameAttribute)} of
+              {false, _} ->
+                  {error, bad_channel_binding};
+              {_, {error, Reason}} ->
+                  {error, Reason};
+              {_, {_, EscapedUserName}} ->
 		case unescape_username(EscapedUserName) of
 		  error -> {error, bad_username};
 		  UserName ->
@@ -89,29 +116,33 @@ mech_step(#state{step = 2} = State, ClientIn) ->
 			    LPass = if is_binary(Pass) -> jid:resourceprep(Pass);
 				       true -> Pass
 				    end,
-			    if Pass == false ->
+			    case Pass of
+				false ->
 				  {error, not_authorized, UserName};
-			       LPass == error ->
+				#scram{hash = Hash } when Algo /= Hash ->
+				  {error, incompatible_mechs};
+				_ when LPass == error ->
 				  {error, saslprep_failed, UserName};
-			       true ->
+				_ ->
 				  {StoredKey, ServerKey, Salt, IterationCount} =
-				      if is_record(Pass, scram) ->
-					      {base64:decode(Pass#scram.storedkey),
-					       base64:decode(Pass#scram.serverkey),
-					       base64:decode(Pass#scram.salt),
-					       Pass#scram.iterationcount};
-					 true ->
-					     TempSalt =
-						 p1_rand:bytes(?SALT_LENGTH),
-					     SaltedPassword =
-						 scram:salted_password(Pass,
-								       TempSalt,
-								       ?SCRAM_DEFAULT_ITERATION_COUNT),
-					     {scram:stored_key(scram:client_key(SaltedPassword)),
-					      scram:server_key(SaltedPassword),
-					      TempSalt,
-					      ?SCRAM_DEFAULT_ITERATION_COUNT}
-				      end,
+				  case Pass of
+				      #scram{storedkey = STK, serverkey = SEK, salt = Slt,
+					     iterationcount = IC} ->
+					  {base64:decode(STK),
+					   base64:decode(SEK),
+					   base64:decode(Slt), IC};
+				      _ ->
+					  TempSalt =
+					  p1_rand:bytes(?SALT_LENGTH),
+					  SaltedPassword =
+					  scram:salted_password(Algo, Pass,
+								TempSalt,
+								?SCRAM_DEFAULT_ITERATION_COUNT),
+					  {scram:stored_key(Algo, scram:client_key(Algo, SaltedPassword)),
+					   scram:server_key(Algo, SaltedPassword),
+					   TempSalt,
+					   ?SCRAM_DEFAULT_ITERATION_COUNT}
+				  end,
 				  ClientFirstMessageBare =
 				      substr(ClientIn,
                                                  str(ClientIn, <<"n=">>)),
@@ -143,17 +174,17 @@ mech_step(#state{step = 2} = State, ClientIn) ->
 	  end;
       _Else -> {error, parser_failed}
     end;
-mech_step(#state{step = 4} = State, ClientIn) ->
+mech_step(#state{step = 4, algo = Algo} = State, ClientIn) ->
     case tokens(ClientIn, <<",">>) of
       [GS2ChannelBindingAttribute, NonceAttribute,
        ClientProofAttribute] ->
 	  case parse_attribute(GS2ChannelBindingAttribute) of
 	    {$c, CVal} ->
-		ChannelBindingSupport = try binary:first(base64:decode(CVal))
-					catch _:badarg -> 0
+		ChannelBindingSupport = try base64:decode(CVal)
+					catch _:badarg -> <<>>
 					end,
-		if (ChannelBindingSupport == $n)
-		  or (ChannelBindingSupport == $y) ->
+		case cbind_verify(State, ChannelBindingSupport) of
+	          true ->
 		    Nonce = <<(State#state.client_nonce)/binary,
 				(State#state.server_nonce)/binary>>,
 		    case parse_attribute(NonceAttribute) of
@@ -170,33 +201,63 @@ mech_step(#state{step = 4} = State, ClientIn) ->
 								    str(ClientIn, <<",p=">>)
 								    - 1)]),
 				  ClientSignature =
-				    scram:client_signature(State#state.stored_key,
+				    scram:client_signature(Algo, State#state.stored_key,
 							     AuthMessage),
-				  ClientKey = scram:client_key(ClientProof,
-							     ClientSignature),
-				  CompareStoredKey = scram:stored_key(ClientKey),
-				  if CompareStoredKey == State#state.stored_key ->
-					 ServerSignature =
-					     scram:server_signature(State#state.server_key,
-								    AuthMessage),
-					 {ok, [{username, State#state.username},
-					       {auth_module, State#state.auth_module},
-					       {authzid, State#state.username}],
-					  <<"v=",
-					    (base64:encode(ServerSignature))/binary>>};
-				     true -> {error, not_authorized, State#state.username}
+				  if
+                                      size(ClientProof) /= size(ClientSignature) ->
+                                          {error, bad_attribute};
+                                      true ->
+                                          ClientKey = scram:client_key_xor(ClientProof,
+                                                                           ClientSignature),
+                                          CompareStoredKey = scram:stored_key(Algo, ClientKey),
+                                          if
+                                              CompareStoredKey == State#state.stored_key ->
+                                                  ServerSignature =
+                                                  scram:server_signature(Algo,
+                                                                         State#state.server_key,
+                                                                         AuthMessage),
+                                                  {ok, [{username, State#state.username},
+                                                        {auth_module, State#state.auth_module},
+                                                        {authzid, State#state.username}],
+                                                   <<"v=",
+                                                     (base64:encode(ServerSignature))/binary>>};
+                                              true ->
+                                                  {error, not_authorized, State#state.username}
+                                          end
 				  end;
 			    _ -> {error, bad_attribute}
 			    end;
 			{$r, _} -> {error, nonce_mismatch};
 			_ -> {error, bad_attribute}
 		    end;
-		  true -> {error, bad_channel_binding}
+		  _ -> {error, bad_channel_binding}
 		end;
 	    _ -> {error, bad_attribute}
 	  end;
       _ -> {error, parser_failed}
     end.
+
+cbind_valid(#state{plus = true}, <<"p=tls-unique">>) ->
+    true;
+cbind_valid(#state{plus = true}, _) ->
+    false;
+cbind_valid(_, <<"y", _/binary>>) ->
+    true;
+cbind_valid(_, <<"n", _/binary>>) ->
+    true;
+cbind_valid(_, _) ->
+    false.
+
+cbind_verify(#state{plus = true, plus_data = Data}, <<"p=tls-unique,,", Data/binary>>) ->
+    true;
+cbind_verify(#state{plus = true}, _) ->
+    false;
+cbind_verify(_, <<"y", _/binary>>) ->
+    true;
+cbind_verify(_, <<"n", _/binary>>) ->
+    true;
+cbind_verify(_, _) ->
+    false.
 
 parse_attribute(<<Name, $=, Val/binary>>) when Val /= <<>> ->
     case is_alpha(Name) of

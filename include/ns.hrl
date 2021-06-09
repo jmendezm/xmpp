@@ -1,6 +1,6 @@
 %%%----------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -151,6 +151,7 @@
 -define(NS_MAM_1, <<"urn:xmpp:mam:1">>).
 -define(NS_MAM_2, <<"urn:xmpp:mam:2">>).
 -define(NS_SID_0, <<"urn:xmpp:sid:0">>).
+-define(NS_INBOX_1, <<"urn:xmpp:inbox:1">>).
 -define(NS_PING, <<"urn:xmpp:ping">>).
 -define(NS_PUSH_0, <<"urn:xmpp:push:0">>).
 -define(NS_CARBONS_2, <<"urn:xmpp:carbons:2">>).
@@ -166,6 +167,7 @@
 -define(NS_THUMBS_1, <<"urn:xmpp:thumbs:1">>).
 -define(NS_NICK,  <<"http://jabber.org/protocol/nick">>).
 -define(NS_RECEIPTS, <<"urn:xmpp:receipts">>).
+-define(NS_CHAT_MARKERS_0, <<"urn:xmpp:chat-markers:0">>).
 -define(NS_REPORTING_0, <<"urn:xmpp:reporting:0">>).
 -define(NS_REPORTING_REASON_ABUSE_0, <<"urn:xmpp:reporting:reason:abuse:0">>).
 -define(NS_REPORTING_REASON_SPAM_0, <<"urn:xmpp:reporting:reason:spam:0">>).

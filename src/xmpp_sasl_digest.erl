@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 -author('alexey@sevcom.net').
 -dialyzer({no_match, [get_local_fqdn/1]}).
 
--export([mech_new/4, mech_step/2, format_error/1]).
+-export([mech_new/6, mech_step/2, format_error/1]).
 %% For tests
 -export([parse/1]).
 
@@ -46,15 +46,15 @@
 
 -spec format_error(error_reason()) -> {atom(), binary()}.
 format_error(parser_failed) ->
-    {'bad-protocol', <<"Response decoding failed">>};
+    {'not-authorized', <<"Response decoding failed">>};
 format_error(invalid_digest_uri) ->
-    {'bad-protocol', <<"Invalid digest URI">>};
+    {'not-authorized', <<"Invalid digest URI">>};
 format_error(not_authorized) ->
     {'not-authorized', <<"Invalid username or password">>};
 format_error(unexpected_response) ->
-    {'bad-protocol', <<"Unexpected response">>}.
+    {'not-authorized', <<"Unexpected response">>}.
 
-mech_new(Host, GetPassword, _CheckPassword, CheckPasswordDigest) ->
+mech_new(_Mech, _Socket, Host, GetPassword, _CheckPassword, CheckPasswordDigest) ->
     #state{step = 1, nonce = p1_rand:get_string(),
 	   host = Host, hostfqdn = get_local_fqdn(Host),
 	   get_password = GetPassword,

@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 -behaviour(xmpp_sasl).
 -author('alexey@process-one.net').
 
--export([mech_new/4, mech_step/2, format_error/1]).
+-export([mech_new/6, mech_step/2, format_error/1]).
 %% For tests
 -export([parse/1]).
 
@@ -30,11 +30,11 @@
 
 -spec format_error(error_reason()) -> {atom(), binary()}.
 format_error(parser_failed) ->
-    {'bad-protocol', <<"Response decoding failed">>};
+    {'not-authorized', <<"Response decoding failed">>};
 format_error(not_authorized) ->
     {'not-authorized', <<"Invalid token">>}.
 
-mech_new(Host, _GetPassword, CheckPassword, _CheckPasswordDigest) ->
+mech_new(_Mech, _Socket, Host, _GetPassword, CheckPassword, _CheckPasswordDigest) ->
     #state{host = Host, check_password = CheckPassword}.
 
 mech_step(State, ClientIn) ->

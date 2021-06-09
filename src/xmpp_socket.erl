@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@
 	 pp/1,
 	 sockname/1,
 	 peername/1,
-	 send_ws_ping/1]).
+	 send_ws_ping/1, get_negotiated_cipher/1, get_tls_last_message/2]).
 
 -include("xmpp.hrl").
 -include_lib("public_key/include/public_key.hrl").
@@ -91,6 +91,9 @@
 	    {ok, true} -> error_logger:info_msg(Fmt, Args);
 	    _ -> false
 	end).
+
+-dialyzer({no_match, send_xml/2}).
+-dialyzer({no_unused, stringify_stream_element/1}).
 
 %%====================================================================
 %% API
@@ -318,6 +321,22 @@ get_peer_certificate(#socket_state{sockmod = SockMod,
     case erlang:function_exported(SockMod, get_peer_certificate, 2) of
 	true -> SockMod:get_peer_certificate(Socket, Type);
 	false -> error
+    end.
+
+-spec get_negotiated_cipher(socket_state()) -> {ok, binary()} | error.
+get_negotiated_cipher(#socket_state{sockmod = SockMod,
+				    socket = Socket}) ->
+    case erlang:function_exported(SockMod, get_negotiated_cipher, 1) of
+	true -> SockMod:get_negotiated_cipher(Socket);
+	false -> error
+    end.
+
+-spec get_tls_last_message(socket_state(), peer | self) -> {ok, binary()} | {error, term()}.
+get_tls_last_message(#socket_state{sockmod = SockMod,
+				    socket = Socket}, Type) ->
+    case erlang:function_exported(SockMod, get_tls_last_message, 2) of
+	true -> SockMod:get_tls_last_message(Type, Socket);
+	false -> {error, unavailable}
     end.
 
 get_verify_result(SocketData) ->

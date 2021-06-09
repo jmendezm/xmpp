@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%%
-%%% Copyright (C) 2002-2020 ProcessOne, SARL. All Rights Reserved.
+%%% Copyright (C) 2002-2021 ProcessOne, SARL. All Rights Reserved.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -314,6 +314,11 @@ handle_cast({send, Pkt}, State) ->
     noreply(send_pkt(State, Pkt));
 handle_cast(send_ws_ping, State) ->
     noreply(send_ws_ping(State));
+handle_cast(release_socket, State) ->
+    erlang:demonitor(maps:get(socket_monitor, State, make_ref())),
+    State2 = maps:remove(socket, State),
+    State3 = maps:remove(socket_monitor, State2),
+    noreply(State3);
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast({close, Reason}, State) ->
@@ -442,6 +447,9 @@ handle_info({tcp, _, Data}, #{socket := Socket} = State) ->
 	      %% TODO: make fast_tls return atoms
 	      process_stream_end({tls, Reason}, State)
       end);
+% Skip new tcp messages after socket get removed from state
+handle_info({tcp, _, _}, State) ->
+    noreply(State);
 handle_info({tcp_closed, _}, State) ->
     handle_info({'$gen_event', closed}, State);
 handle_info({tcp_error, _, Reason}, State) ->
@@ -473,7 +481,7 @@ code_change(OldVsn, State, Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec init_state(state(), [proplists:property()]) -> state().
+-spec init_state(state(), [proplists:property()]) -> state() | {stop, state()}.
 init_state(#{socket := Socket, mod := Mod} = State, Opts) ->
     Encrypted = proplists:get_bool(tls, Opts),
     State1 = State#{stream_direction => in,
@@ -561,10 +569,13 @@ process_stream_end(_, #{stream_state := disconnected} = State) ->
 process_stream_end(Reason, State) ->
     State1 = State#{stream_timeout => infinity,
 		    stream_state => disconnected},
-    try callback(handle_stream_end, Reason, State1)
+    try
+        State2 = callback(handle_stream_end, Reason, State1),
+        cast(self(), release_socket),
+        State2
     catch _:{?MODULE, undef} ->
 	stop_async(self()),
-	State1
+        State1
     end.
 
 -spec process_stream(stream_start(), state()) -> state().
@@ -899,7 +910,7 @@ process_starttls_failure(Why, State) ->
 
 -spec process_sasl_request(sasl_auth(), state()) -> state().
 process_sasl_request(#sasl_auth{mechanism = Mech, text = ClientIn},
-		     #{lserver := LServer} = State) ->
+		     #{lserver := LServer, socket := Socket} = State) ->
     State1 = State#{sasl_mech => Mech},
     Mechs = get_sasl_mechanisms(State1),
     case lists:member(Mech, Mechs) of
@@ -916,7 +927,7 @@ process_sasl_request(#sasl_auth{mechanism = Mech, text = ClientIn},
 	    CheckPW = check_password_fun(Mech, State1),
 	    CheckPWDigest = check_password_digest_fun(Mech, State1),
 	    SASLState = xmpp_sasl:server_new(LServer, GetPW, CheckPW, CheckPWDigest),
-	    Res = xmpp_sasl:server_start(SASLState, Mech, ClientIn),
+	    Res = xmpp_sasl:server_start(SASLState, Mech, ClientIn, Socket),
 	    process_sasl_result(Res, State1#{sasl_state => SASLState});
 	false ->
 	    process_sasl_result({error, unsupported_mechanism, <<"">>}, State1)
@@ -1267,7 +1278,9 @@ socket_send(_, _) ->
 close_socket(#{socket := Socket} = State) ->
     xmpp_socket:close(Socket),
     State#{stream_timeout => infinity,
-	   stream_state => disconnected}.
+	   stream_state => disconnected};
+close_socket(State) ->
+    State.
 
 -spec select_lang(binary(), binary()) -> binary().
 select_lang(Lang, <<"">>) -> Lang;
