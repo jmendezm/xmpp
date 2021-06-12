@@ -1,3 +1,46 @@
+# Version 1.5.0
+
+* Updating p1_utils to version 1.0.21.
+* Updating stringprep to version 1.0.24.
+* Updating fast_tls to version 1.1.10.
+* Updating fast_xml to version 1.1.45.
+* Add support for scram-sha-256/512-{plus}
+
+# Version 1.4.10
+
+* Updating ezlib to version 1.0.9.
+* Updating fast_tls to version 1.1.9.
+* Updating fast_xml to version 1.1.44.
+* Updating stringprep to version 1.0.23.
+* Add support for MAM Flipped Pages
+* Exclude old OTP releases from Travis
+* Support building specs with rebar3
+
+# Version 1.4.9
+
+* Updating p1_utils to version 1.0.20.
+* Updating fast_xml to version 1.1.43.
+* Updating fast_tls to version 1.1.8.
+* Updating stringprep to version 1.0.22.
+
+# Version 1.4.8
+
+* Fixes to compile with Erlang/OTP 23.0
+* updating ezlib to version 1.0.8.
+* updating fast_tls to version 1.1.7.
+* updating fast_xml to version 1.1.42.
+* updating stringprep to version 1.0.21.
+* Replace bad-protocol sasl errors with not-authorized
+* Add Travis setup, and set Erlang/OTP 19.0 as lowest supported version
+
+# Version 1.4.7
+
+* Updating fast_tls to version 1.1.6.
+* Updating p1_utils to version 1.0.19.
+* Updating fast_xml to version 1.1.41.
+* Updating stringprep to version 1.0.20.
+* Fix compatibility issues with Erlang 23
+
 # Version 1.4.6
 
 * Updating fast_tls to version 1.1.5.
